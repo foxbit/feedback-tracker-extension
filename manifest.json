@@ -2,25 +2,33 @@
     "manifest_version": 3,
     "name": "Feedback Tracker",
     "version": "1.0",
-    "description": "Registre feedbacks clicando nos elementos do site.",
-    "permissions": ["activeTab", "storage", "scripting", "tabs"],
-    "host_permissions": ["https://api.airtable.com/v0/*"],
+    "description": "Capture elementos e envie feedbacks com screenshots",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "storage",
+        "tabs",
+        "desktopCapture"
+    ],
+    "host_permissions": [
+        "https://api.imgbb.com/*",
+        "https://api.airtable.com/*"
+    ],
     "background": {
-      "service_worker": "background.js"
+        "service_worker": "background.js"
     },
     "action": {
-      "default_popup": "popup.html",
-      "default_icon": {
-        "16": "icon.png",
-        "48": "icon.png",
-        "128": "icon.png"
-      }
+        "default_popup": "popup.html",
+        "default_icon": "icon.png"
     },
     "content_scripts": [
-      {
-        "matches": ["<all_urls>"],
-        "js": ["content.js"],
-        "run_at": "document_idle"
-      }
-    ]
+        {
+            "matches": ["<all_urls>"],
+            "js": ["content.js"]
+        }
+    ],
+    "icons": {
+        "48": "icon.png",
+        "128": "icon.png"
+    }
 }

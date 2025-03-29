@@ -1,6 +1,7 @@
 // Variável global para controlar o modo de captura
 let captureMode = false;
 let hoveredElement = null;
+let selectedElement = null;
 
 // Função para criar o indicador visual
 function createIndicator() {
@@ -36,6 +37,60 @@ function highlightElement(element) {
         element.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
         hoveredElement = element;
     }
+}
+
+// Função para capturar screenshot com área destacada
+async function captureScreenshotWithHighlight(element) {
+    // Salvar o estilo original
+    const originalOutline = element.style.outline;
+    const originalBackground = element.style.backgroundColor;
+    
+    // Aplicar destaque para screenshot
+    element.style.outline = '3px solid #FF4081';
+    element.style.backgroundColor = 'rgba(255, 64, 129, 0.2)';
+    
+    // Scroll para o elemento
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Esperar um pouco para garantir que o scroll terminou
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Capturar as dimensões do elemento e da viewport
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // Calcular a área de captura
+    const captureArea = {
+        x: Math.max(0, rect.left - 100),
+        y: Math.max(0, rect.top - 100),
+        width: Math.min(viewportWidth, rect.width + 200),
+        height: Math.min(viewportHeight, rect.height + 200)
+    };
+    
+    // Enviar mensagem para o background script fazer a captura
+    chrome.runtime.sendMessage({
+        action: "captureScreen",
+        area: captureArea
+    }, async (response) => {
+        if (response && response.imageData) {
+            // Restaurar o estilo original do elemento
+            element.style.outline = originalOutline;
+            element.style.backgroundColor = originalBackground;
+            
+            // Salvar os dados da captura
+            const elementInfo = {
+                tagName: element.tagName,
+                id: element.id,
+                className: element.className,
+                textContent: element.textContent.substring(0, 50) + (element.textContent.length > 50 ? '...' : ''),
+                xpath: getXPath(element),
+                screenshot: response.imageData
+            };
+            
+            chrome.storage.local.set({ selectedElement: JSON.stringify(elementInfo) });
+        }
+    });
 }
 
 // Função para iniciar o modo de captura
@@ -82,36 +137,23 @@ function handleElementHover(event) {
 }
 
 // Função para lidar com a captura do elemento
-function handleElementCapture(event) {
+async function handleElementCapture(event) {
     if (captureMode) {
         event.preventDefault();
         event.stopPropagation();
         
         const element = event.target;
+        selectedElement = element;
         
-        // Captura informações sobre o elemento
-        const elementInfo = {
-            tagName: element.tagName,
-            id: element.id,
-            className: element.className,
-            textContent: element.textContent.substring(0, 50) + (element.textContent.length > 50 ? '...' : ''),
-            html: element.outerHTML.substring(0, 200) + (element.outerHTML.length > 200 ? '...' : ''),
-            xpath: getXPath(element)
-        };
+        // Capturar screenshot com área destacada
+        await captureScreenshotWithHighlight(element);
         
-        // Adicionar efeito visual de seleção
-        element.style.outline = '2px solid #2196F3';
-        element.style.backgroundColor = 'rgba(33, 150, 243, 0.1)';
-        
-        // Salvar o elemento selecionado
-        chrome.storage.local.set({ selectedElement: JSON.stringify(elementInfo) });
-        
-        // Finalizar o modo de captura após selecionar um elemento
+        // Finalizar o modo de captura
         endCaptureMode();
         
         // Notificar o usuário
         const notification = document.createElement('div');
-        notification.textContent = 'Elemento selecionado! Adicione o feedback no popup.';
+        notification.textContent = 'Elemento capturado! Adicione o feedback no popup.';
         notification.style.cssText = `
             position: fixed;
             bottom: 20px;
