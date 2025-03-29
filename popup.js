@@ -5,6 +5,7 @@ const resetButton = document.getElementById("resetBtn");
 const feedbackInput = document.getElementById("feedback");
 const selectedElementDiv = document.getElementById("selectedElement");
 const statusMessageDiv = document.getElementById("statusMessage");
+const userSelect = document.getElementById("userSelect");
 const steps = document.querySelectorAll('.step');
 const step1Content = document.getElementById("step1Content");
 const step2Content = document.getElementById("step2Content");
@@ -12,8 +13,68 @@ const step2Content = document.getElementById("step2Content");
 // Estado inicial
 let isCapturing = false;
 let currentStep = 1;
-updateSteps(currentStep);
-showStep(currentStep);
+let selectedUserId = null;
+let selectedUserName = null;
+
+// Carregar usuários ao iniciar
+loadUsers();
+
+// Função para carregar usuários
+async function loadUsers() {
+    try {
+        const response = await new Promise((resolve) => {
+            chrome.runtime.sendMessage({ action: "getUsers" }, (response) => {
+                if (chrome.runtime.lastError) {
+                    resolve({ success: false, error: chrome.runtime.lastError });
+                } else {
+                    resolve(response);
+                }
+            });
+        });
+
+        if (response.success && response.users) {
+            // Limpar opções existentes
+            userSelect.innerHTML = '<option value="">Selecione um usuário</option>';
+            
+            // Adicionar usuários ao select
+            response.users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.name;
+                option.dataset.name = user.displayName;
+                userSelect.appendChild(option);
+            });
+
+            // Carregar usuário salvo
+            chrome.storage.local.get(['selectedUserId'], (data) => {
+                if (data.selectedUserId) {
+                    userSelect.value = data.selectedUserId;
+                    selectedUserId = data.selectedUserId;
+                    const selectedOption = userSelect.querySelector(`option[value="${data.selectedUserId}"]`);
+                    if (selectedOption) {
+                        selectedUserName = selectedOption.dataset.name;
+                    }
+                }
+            });
+        } else {
+            throw new Error('Erro ao carregar usuários');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+        showStatus('Erro ao carregar lista de usuários', true);
+    }
+}
+
+// Event listener para o select de usuários
+userSelect.addEventListener('change', (event) => {
+    selectedUserId = event.target.value;
+    const selectedOption = event.target.options[event.target.selectedIndex];
+    selectedUserName = selectedOption.dataset.name;
+    chrome.storage.local.set({ 
+        selectedUserId: selectedUserId,
+        selectedUserName: selectedUserName 
+    });
+});
 
 // Função para atualizar os passos
 function updateSteps(step) {
@@ -146,6 +207,11 @@ sendButton.addEventListener("click", async () => {
     console.log("Botão de enviar clicado");
     const feedback = feedbackInput.value.trim();
     
+    if (!selectedUserId || !selectedUserName) {
+        showStatus("Por favor, selecione um usuário antes de enviar.", true);
+        return;
+    }
+    
     if (!feedback) {
         showStatus("Por favor, digite um feedback antes de enviar.", true);
         return;
@@ -176,7 +242,9 @@ sendButton.addEventListener("click", async () => {
                         action: "sendFeedback",
                         element: data.selectedElement,
                         feedback: feedback,
-                        url: tabs[0].url
+                        url: tabs[0].url,
+                        userId: selectedUserId,
+                        userName: selectedUserName
                     }, (response) => {
                         if (chrome.runtime.lastError) {
                             console.error("Erro ao enviar mensagem:", chrome.runtime.lastError);
@@ -227,4 +295,5 @@ function resetForm() {
     chrome.storage.local.remove(["selectedElement"]);
     updateSelectedElement(null);
     updateSteps(1);
+    // Não resetamos o usuário selecionado para manter a preferência
 }

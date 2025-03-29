@@ -1,7 +1,33 @@
 const AIRTABLE_ACCESS_TOKEN = "patx1SJ9p9OJbInHO.8f1b579dbd8b7b2445a7ba193f6aef1fcb36e11ad0e0da36eed60edebdd63fa1";
 const AIRTABLE_BASE_ID = "appuXzTJFuxvHHMPs";
 const TABLE_NAME = "Feedbacks";
+const USERS_TABLE_NAME = "Users"; // Nova tabela para usuários
 const IMGBB_API_KEY = "0f0e75908a28b73bf2957e83a1aaff71"; // Você precisará criar uma conta no ImgBB e obter uma chave API
+
+// Função para buscar usuários do Airtable
+async function fetchUsers() {
+    try {
+        const response = await fetch(
+            `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${USERS_TABLE_NAME}?view=Grid%20view`,
+            {
+                headers: {
+                    "Authorization": `Bearer ${AIRTABLE_ACCESS_TOKEN}`,
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+        
+        const data = await response.json();
+        return data.records.map(record => ({
+            id: record.id,
+            name: record.fields.Name,
+            displayName: record.fields.Name // Adicionando o displayName para uso no feedback
+        }));
+    } catch (error) {
+        console.error('Erro ao buscar usuários:', error);
+        return [];
+    }
+}
 
 // Função para capturar screenshot
 async function captureVisibleTab(area) {
@@ -47,6 +73,13 @@ async function uploadToImgBB(imageData) {
 
 // Adicione um event listener para processar mensagens
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "getUsers") {
+        fetchUsers().then(users => {
+            sendResponse({ success: true, users });
+        });
+        return true;
+    }
+    
     if (message.action === "captureScreen") {
         captureVisibleTab(message.area).then(imageData => {
             sendResponse({ imageData });
@@ -78,7 +111,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             "Feedback": message.feedback,
                             "URL": message.url,
                             "Screenshot": imageUrl,
-                            "Data": new Date().toISOString()
+                            "Data": new Date().toISOString(),
+                            "Usuario": message.userName // Usando o nome do usuário ao invés do ID
                         }
                     }
                 ]
