@@ -204,10 +204,22 @@ function getXPath(element) {
     return path;
 }
 
+// Função para remover o highlight do elemento selecionado
+function removeHighlight() {
+    if (selectedElement) {
+        selectedElement.style.outline = '';
+        selectedElement.style.backgroundColor = '';
+        selectedElement = null;
+    }
+}
+
 // Listener para mensagens do popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "startCapture") {
         startCaptureMode();
+        sendResponse({ success: true });
+    } else if (message.action === "feedbackSent") {
+        removeHighlight();
         sendResponse({ success: true });
     }
 });

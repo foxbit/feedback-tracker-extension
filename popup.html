@@ -4,15 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Feedback Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="popup.css">
 </head>
-<body>
-    <h2>Registrar Feedback</h2>
-    <button id="capture">Selecionar Elemento</button>
-    <div id="selectedElement" class="selected-element"></div>
-    <textarea id="feedback" placeholder="Digite seu feedback..."></textarea>
-    <button id="send">Enviar</button>
-    <div id="statusMessage" class="status-message"></div>
+<body class="bg-gray-50">
+    <div class="popup-container">
+        <div class="header">
+            <h2>Registrar Feedback</h2>
+            <button id="resetBtn" class="reset-button" title="Limpar formulário">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="steps">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-content">Selecionar Elemento</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-content">Escrever Feedback</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Passo 1: Selecionar Elemento -->
+            <div id="step1Content" class="step-container active">
+                <button id="capture" class="action-button capture-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="button-icon" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd" />
+                    </svg>
+                    Selecionar Elemento
+                </button>
+                <div id="selectedElement" class="selected-element"></div>
+            </div>
+
+            <!-- Passo 2: Escrever Feedback -->
+            <div id="step2Content" class="step-container">
+                <textarea id="feedback" class="feedback-input" placeholder="Digite seu feedback..."></textarea>
+                <button id="send" class="action-button send-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="button-icon" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                    </svg>
+                    Enviar Feedback
+                </button>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+    </div>
     <script src="popup.js"></script>
 </body>
 </html>
