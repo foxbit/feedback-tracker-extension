@@ -1,52 +1,80 @@
-# Feedback Tracker - Extensão Chrome
+# Feedback Tracker Extension
 
-Uma extensão para o Chrome que permite selecionar elementos em uma página web e enviar feedbacks para o Airtable.
+Extensão do Chrome para coletar feedback visual de elementos em páginas web. Versão 1.0.0
 
 ## Funcionalidades
 
-- Seleção visual de elementos na página
-- Interface intuitiva para envio de feedbacks
-- Integração com Airtable para armazenamento dos dados
+- Seleção visual de elementos na página com destaque zebrado
+- Sistema de feedback com usuários e projetos
+- Integração com Airtable para armazenamento
+- Interface moderna e intuitiva com sistema de passos
+- Persistência de preferências do usuário
+- Configuração segura de chaves de API
 - Feedback visual durante a seleção de elementos
 - Tratamento de erros e notificações ao usuário
 
-## Tecnologias Utilizadas
-
-- JavaScript
-- Chrome Extension API
-- Airtable API
-- HTML/CSS
-
-## Instalação
-
-1. Clone este repositório:
-```bash
-git clone [URL_DO_SEU_REPOSITORIO]
-```
-
-2. Abra o Chrome e navegue até `chrome://extensions/`
-
-3. Ative o "Modo do desenvolvedor" no canto superior direito
-
-4. Clique em "Carregar sem compactação" e selecione a pasta do projeto
-
 ## Configuração
 
-1. Crie uma base no Airtable com a seguinte estrutura:
-   - Elemento (texto longo)
-   - Feedback (texto longo)
-   - URL (texto)
-   - Data (data/hora)
+Para usar a extensão, você precisará configurar as seguintes chaves de API:
 
-2. Configure sua chave API do Airtable no arquivo `background.js`
+1. **Airtable**
+   - Token de acesso pessoal
+   - ID da base
 
-## Uso
+2. **ImgBB**
+   - Chave de API
+
+### Como configurar
+
+1. Instale a extensão no Chrome
+2. Clique com o botão direito no ícone da extensão
+3. Selecione "Opções"
+4. Preencha as chaves de API necessárias
+5. Clique em "Salvar"
+
+## Estrutura do Airtable
+
+A extensão requer três tabelas no Airtable:
+
+### Tabela "Users"
+- Campo "Name" (Single line text)
+
+### Tabela "Feedbacks"
+- Campo "Element" (Long text)
+- Campo "Feedback" (Long text)
+- Campo "URL" (URL)
+- Campo "Usuario" (Single line text)
+- Campo "Projeto" (Single line text)
+
+### Tabela "Projetos"
+- Campo "Nome" (Single line text)
+
+## Como usar
 
 1. Clique no ícone da extensão na barra de ferramentas do Chrome
-2. Clique em "Selecionar Elemento"
-3. Clique no elemento da página que deseja dar feedback
-4. Digite seu feedback no campo de texto
-5. Clique em "Enviar"
+2. Selecione o projeto (se não tiver preferência salva)
+3. Selecione o usuário (se não tiver preferência salva)
+4. Clique em "Selecionar Elemento"
+5. Clique no elemento da página que deseja dar feedback
+6. Digite seu feedback no campo de texto
+7. Clique em "Enviar"
+
+## Segurança
+
+- Todas as chaves de API são armazenadas localmente no navegador
+- Nenhuma chave é exposta no código fonte
+- As chamadas de API são feitas de forma segura através do background script
+- As preferências do usuário são salvas localmente
+
+## Desenvolvimento
+
+Para contribuir com o projeto:
+
+1. Clone o repositório
+2. Abra o Chrome e vá para `chrome://extensions/`
+3. Ative o "Modo do desenvolvedor"
+4. Clique em "Carregar sem compactação"
+5. Selecione a pasta do projeto
 
 ## Estrutura do Projeto
 
@@ -57,21 +85,21 @@ git clone [URL_DO_SEU_REPOSITORIO]
 ├── popup.css        # Estilos da interface
 ├── content.js       # Script injetado nas páginas
 ├── background.js    # Script de background
+├── options.html     # Página de configurações
+├── options.js       # Lógica das configurações
 └── icon.png         # Ícone da extensão
 ```
 
-## Contribuindo
+## Versão 1.0.0
 
-1. Faça um Fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## Segurança
-
-⚠️ **Importante**: Nunca compartilhe suas chaves API do Airtable. Mantenha-as em um arquivo de configuração separado que não seja versionado.
+Esta é a primeira versão estável da extensão, incluindo todas as funcionalidades básicas:
+- Sistema completo de feedback
+- Integração com Airtable
+- Interface moderna e responsiva
+- Sistema de passos intuitivo
+- Persistência de preferências
+- Configuração segura de APIs
 
 ## Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes. 
+MIT 

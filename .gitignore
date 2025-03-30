@@ -1,4 +1,9 @@
-# Arquivos do sistema
+# Arquivos de configuração local
+.env
+.env.local
+.env.*.local
+
+# Arquivos de sistema
 .DS_Store
 Thumbs.db
 
@@ -8,21 +13,16 @@ Thumbs.db
 *.swp
 *.swo
 
-# Arquivos de dependências
-node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
-
-# Arquivos de build/distribuição
+# Arquivos de build
 dist/
 build/
 *.zip
 
-# Arquivos de ambiente
-.env
-.env.local
-.env.*.local
-
 # Logs
-*.log 
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependências
+node_modules/ 
