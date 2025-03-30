@@ -244,6 +244,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "startCapture") {
         startCaptureMode();
         sendResponse({ success: true });
+    } else if (message.action === "stopCapture") {
+        captureMode = false;
+        removeHighlight();
+        endCaptureMode();
+        sendResponse({ success: true });
     } else if (message.action === "feedbackSent") {
         removeHighlight();
         sendResponse({ success: true });

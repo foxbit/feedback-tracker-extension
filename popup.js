@@ -202,6 +202,50 @@ captureButton.addEventListener("click", () => {
     });
 });
 
+// Função para enviar feedback
+async function sendFeedback() {
+    if (!selectedElement || !selectedUserId) {
+        showStatus('Por favor, selecione um elemento e um usuário', true);
+        return;
+    }
+
+    const feedback = feedbackInput.value.trim();
+    if (!feedback) {
+        showStatus('Por favor, escreva seu feedback', true);
+        return;
+    }
+
+    sendButton.disabled = true;
+    sendButton.classList.add('loading');
+
+    try {
+        const response = await chrome.runtime.sendMessage({
+            action: 'sendFeedback',
+            element: selectedElement,
+            feedback: feedback,
+            userId: selectedUserId,
+            userName: selectedUserName
+        });
+
+        if (response.success) {
+            showStatus('Feedback enviado com sucesso!', false);
+            // Desativa o modo de seleção
+            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'stopCapture' });
+            });
+            resetForm();
+        } else {
+            showStatus(response.error || 'Erro ao enviar feedback', true);
+        }
+    } catch (error) {
+        console.error('Erro ao enviar feedback:', error);
+        showStatus('Erro ao enviar feedback', true);
+    } finally {
+        sendButton.disabled = false;
+        sendButton.classList.remove('loading');
+    }
+}
+
 // Event listener para o botão de enviar
 sendButton.addEventListener("click", async () => {
     console.log("Botão de enviar clicado");
