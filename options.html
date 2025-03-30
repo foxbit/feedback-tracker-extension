@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - Feedback Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">Configurações do Feedback Tracker</h1>
+        
+        <div class="space-y-6">
+            <!-- Airtable -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Configurações do Airtable</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label for="airtableToken" class="block text-sm font-medium text-gray-700 mb-1">
+                            Token de Acesso
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <input type="password" id="airtableToken" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="pat.seu_token_aqui">
+                    </div>
+                    <div>
+                        <label for="airtableBase" class="block text-sm font-medium text-gray-700 mb-1">
+                            ID da Base
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="airtableBase" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="appXXXXXXXXXXXXX">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ImgBB -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Configurações do ImgBB</h2>
+                <div>
+                    <label for="imgbbKey" class="block text-sm font-medium text-gray-700 mb-1">
+                        Chave da API
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <input type="password" id="imgbbKey" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="sua_chave_aqui">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-4">
+                <div class="text-sm text-gray-500">
+                    <span class="text-red-500">*</span> Campos obrigatórios
+                </div>
+                <div class="space-x-3">
+                    <button id="testConfig" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        Testar Configuração
+                    </button>
+                    <button id="saveConfig" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Salvar Configurações
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div id="statusMessage" class="mt-4 p-4 rounded-md hidden">
+        </div>
+    </div>
+    <script src="options.js"></script>
+</body>
+</html> 

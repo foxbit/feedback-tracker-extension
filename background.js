@@ -1,17 +1,39 @@
-const AIRTABLE_ACCESS_TOKEN = "patx1SJ9p9OJbInHO.8f1b579dbd8b7b2445a7ba193f6aef1fcb36e11ad0e0da36eed60edebdd63fa1";
-const AIRTABLE_BASE_ID = "appuXzTJFuxvHHMPs";
+// Função para obter as configurações
+async function getConfig() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['airtableToken', 'airtableBase', 'imgbbKey'], (data) => {
+            resolve({
+                AIRTABLE_ACCESS_TOKEN: data.airtableToken,
+                AIRTABLE_BASE_ID: data.airtableBase,
+                IMGBB_API_KEY: data.imgbbKey
+            });
+        });
+    });
+}
+
+// Função para verificar se as configurações existem
+async function checkConfig() {
+    const config = await getConfig();
+    return config.AIRTABLE_ACCESS_TOKEN && config.AIRTABLE_BASE_ID && config.IMGBB_API_KEY;
+}
+
+// Constantes
 const TABLE_NAME = "Feedbacks";
-const USERS_TABLE_NAME = "Users"; // Nova tabela para usuários
-const IMGBB_API_KEY = "0f0e75908a28b73bf2957e83a1aaff71"; // Você precisará criar uma conta no ImgBB e obter uma chave API
+const USERS_TABLE_NAME = "Users";
 
 // Função para buscar usuários do Airtable
 async function fetchUsers() {
     try {
+        const config = await getConfig();
+        if (!await checkConfig()) {
+            throw new Error('Configurações não encontradas. Por favor, configure as chaves de API nas opções da extensão.');
+        }
+
         const response = await fetch(
-            `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${USERS_TABLE_NAME}?view=Grid%20view`,
+            `https://api.airtable.com/v0/${config.AIRTABLE_BASE_ID}/${USERS_TABLE_NAME}?view=Grid%20view`,
             {
                 headers: {
-                    "Authorization": `Bearer ${AIRTABLE_ACCESS_TOKEN}`,
+                    "Authorization": `Bearer ${config.AIRTABLE_ACCESS_TOKEN}`,
                     "Content-Type": "application/json"
                 }
             }
@@ -21,7 +43,7 @@ async function fetchUsers() {
         return data.records.map(record => ({
             id: record.id,
             name: record.fields.Name,
-            displayName: record.fields.Name // Adicionando o displayName para uso no feedback
+            displayName: record.fields.Name
         }));
     } catch (error) {
         console.error('Erro ao buscar usuários:', error);
@@ -44,6 +66,11 @@ async function captureVisibleTab(area) {
 // Função para fazer upload da imagem para o ImgBB
 async function uploadToImgBB(imageData) {
     try {
+        const config = await getConfig();
+        if (!await checkConfig()) {
+            throw new Error('Configurações não encontradas. Por favor, configure as chaves de API nas opções da extensão.');
+        }
+
         // Converter data URL para Blob
         const response = await fetch(imageData);
         const blob = await response.blob();
@@ -53,7 +80,7 @@ async function uploadToImgBB(imageData) {
         formData.append('image', blob);
         
         // Fazer upload para o ImgBB
-        const uploadResponse = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        const uploadResponse = await fetch(`https://api.imgbb.com/1/upload?key=${config.IMGBB_API_KEY}`, {
             method: 'POST',
             body: formData
         });
@@ -95,7 +122,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const screenshotData = elementData.screenshot;
         
         // Upload da screenshot para o ImgBB
-        uploadToImgBB(screenshotData).then(imageUrl => {
+        uploadToImgBB(screenshotData).then(async imageUrl => {
+            const config = await getConfig();
+            if (!await checkConfig()) {
+                sendResponse({
+                    success: false,
+                    error: 'Configurações não encontradas. Por favor, configure as chaves de API nas opções da extensão.'
+                });
+                return;
+            }
+
             // Preparar dados para o Airtable
             const feedbackData = {
                 records: [
@@ -112,7 +148,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             "URL": message.url,
                             "Screenshot": imageUrl,
                             "Data": new Date().toISOString(),
-                            "Usuario": message.userName // Usando o nome do usuário ao invés do ID
+                            "Usuario": message.userName
                         }
                     }
                 ]
@@ -121,10 +157,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             console.log("Dados a serem enviados para o Airtable:", feedbackData);
             
             // Enviar para o Airtable
-            return fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TABLE_NAME}`, {
+            return fetch(`https://api.airtable.com/v0/${config.AIRTABLE_BASE_ID}/${TABLE_NAME}`, {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer ${AIRTABLE_ACCESS_TOKEN}`,
+                    "Authorization": `Bearer ${config.AIRTABLE_ACCESS_TOKEN}`,
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(feedbackData)

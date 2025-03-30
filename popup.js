@@ -297,3 +297,44 @@ function resetForm() {
     updateSteps(1);
     // Não resetamos o usuário selecionado para manter a preferência
 }
+
+// Função para verificar configurações
+async function checkConfiguration() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['airtableToken', 'airtableBase', 'imgbbKey'], (data) => {
+            const hasConfig = data.airtableToken && data.airtableBase && data.imgbbKey;
+            resolve(hasConfig);
+        });
+    });
+}
+
+// Função para mostrar aviso de configuração
+function showConfigurationWarning() {
+    const warning = document.createElement('div');
+    warning.className = 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4';
+    warning.innerHTML = `
+        <p class="font-bold">Configuração Necessária</p>
+        <p>Por favor, configure as chaves de API nas opções da extensão antes de usar.</p>
+        <button id="openOptions" class="mt-2 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+            Abrir Configurações
+        </button>
+    `;
+    
+    document.querySelector('.popup-container').prepend(warning);
+    
+    document.getElementById('openOptions').addEventListener('click', () => {
+        chrome.runtime.openOptionsPage();
+    });
+    
+    // Desabilitar botões
+    captureButton.disabled = true;
+    sendButton.disabled = true;
+}
+
+// Verificar configuração ao carregar
+window.addEventListener('load', async () => {
+    const hasConfig = await checkConfiguration();
+    if (!hasConfig) {
+        showConfigurationWarning();
+    }
+});
