@@ -17,7 +17,7 @@ function createIndicator() {
         color: black;
         text-align: center;
         padding: 10px;
-        z-index: 9999;
+        z-index: 999999;
         font-family: Arial, sans-serif;
         font-size: 14px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
@@ -29,12 +29,23 @@ function createIndicator() {
 function highlightElement(element) {
     if (hoveredElement) {
         hoveredElement.style.outline = '';
-        hoveredElement.style.backgroundColor = '';
+        hoveredElement.style.background = '';
     }
     
     if (element) {
-        element.style.outline = '2px solid #4CAF50';
-        element.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
+        element.style.outline = '3px solid #4CAF50';
+        element.style.background = `
+            linear-gradient(
+                45deg,
+                rgba(76, 175, 80, 0.2) 25%,
+                rgba(76, 175, 80, 0.1) 25%,
+                rgba(76, 175, 80, 0.1) 50%,
+                rgba(76, 175, 80, 0.2) 50%,
+                rgba(76, 175, 80, 0.2) 75%,
+                rgba(76, 175, 80, 0.1) 75%,
+                rgba(76, 175, 80, 0.1) 100%
+            )`;
+        element.style.backgroundSize = '20px 20px';
         hoveredElement = element;
     }
 }
@@ -43,11 +54,23 @@ function highlightElement(element) {
 async function captureScreenshotWithHighlight(element) {
     // Salvar o estilo original
     const originalOutline = element.style.outline;
-    const originalBackground = element.style.backgroundColor;
+    const originalBackground = element.style.background;
+    const originalBackgroundSize = element.style.backgroundSize;
     
     // Aplicar destaque para screenshot
     element.style.outline = '3px solid #FF4081';
-    element.style.backgroundColor = 'rgba(255, 64, 129, 0.2)';
+    element.style.background = `
+        linear-gradient(
+            45deg,
+            rgba(255, 64, 129, 0.3) 25%,
+            rgba(255, 64, 129, 0.2) 25%,
+            rgba(255, 64, 129, 0.2) 50%,
+            rgba(255, 64, 129, 0.3) 50%,
+            rgba(255, 64, 129, 0.3) 75%,
+            rgba(255, 64, 129, 0.2) 75%,
+            rgba(255, 64, 129, 0.2) 100%
+        )`;
+    element.style.backgroundSize = '20px 20px';
     
     // Scroll para o elemento
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -76,7 +99,8 @@ async function captureScreenshotWithHighlight(element) {
         if (response && response.imageData) {
             // Restaurar o estilo original do elemento
             element.style.outline = originalOutline;
-            element.style.backgroundColor = originalBackground;
+            element.style.background = originalBackground;
+            element.style.backgroundSize = originalBackgroundSize;
             
             // Salvar os dados da captura
             const elementInfo = {
@@ -117,7 +141,8 @@ function endCaptureMode() {
     // Remover highlight do elemento
     if (hoveredElement) {
         hoveredElement.style.outline = '';
-        hoveredElement.style.backgroundColor = '';
+        hoveredElement.style.background = '';
+        hoveredElement.style.backgroundSize = '';
         hoveredElement = null;
     }
     
@@ -127,6 +152,16 @@ function endCaptureMode() {
     // Remover os listeners
     document.removeEventListener("mouseover", handleElementHover);
     document.removeEventListener("click", handleElementCapture);
+}
+
+// Função para remover o highlight do elemento selecionado
+function removeHighlight() {
+    if (selectedElement) {
+        selectedElement.style.outline = '';
+        selectedElement.style.background = '';
+        selectedElement.style.backgroundSize = '';
+        selectedElement = null;
+    }
 }
 
 // Função para lidar com o hover sobre elementos
@@ -163,7 +198,7 @@ async function handleElementCapture(event) {
             color: white;
             padding: 10px 20px;
             border-radius: 4px;
-            z-index: 9999;
+            z-index: 999999;
             font-family: Arial, sans-serif;
             font-size: 14px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
@@ -202,15 +237,6 @@ function getXPath(element) {
         element = element.parentNode;
     }
     return path;
-}
-
-// Função para remover o highlight do elemento selecionado
-function removeHighlight() {
-    if (selectedElement) {
-        selectedElement.style.outline = '';
-        selectedElement.style.backgroundColor = '';
-        selectedElement = null;
-    }
 }
 
 // Listener para mensagens do popup
