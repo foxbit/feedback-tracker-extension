@@ -12,10 +12,12 @@
     ],
     "host_permissions": [
         "https://api.imgbb.com/*",
-        "https://api.airtable.com/*"
+        "https://api.airtable.com/*",
+        "<all_urls>"
     ],
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background.js",
+        "type": "module"
     },
     "action": {
         "default_popup": "popup.html",

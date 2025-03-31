@@ -51,15 +51,76 @@ async function fetchUsers() {
     }
 }
 
-// Função para capturar screenshot
-async function captureVisibleTab(area) {
+// Função para capturar a tela inteira
+async function captureFullScreen() {
     try {
+        // Obter a aba ativa
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        
+        // Capturar a tela usando a API do Chrome
         const imageData = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
         return imageData;
     } catch (error) {
-        console.error('Erro ao capturar screenshot:', error);
-        return null;
+        console.error('Erro ao capturar tela:', error);
+        throw error;
+    }
+}
+
+// Função para capturar a área selecionada
+async function captureSelectedArea(area) {
+    try {
+        // Obter a aba ativa
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        
+        // Capturar a tela usando a API do Chrome
+        const imageData = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+        
+        // Converter data URL para Blob
+        const response = await fetch(imageData);
+        const blob = await response.blob();
+        
+        // Criar bitmap da imagem
+        const bitmap = await createImageBitmap(blob);
+        
+        // Criar um canvas com o tamanho da tela inteira
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const ctx = canvas.getContext('2d');
+        
+        // Desenhar a imagem inteira primeiro
+        ctx.drawImage(bitmap, 0, 0);
+        
+        // Criar um segundo canvas para o overlay
+        const overlayCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const overlayCtx = overlayCanvas.getContext('2d');
+        
+        // Desenhar o overlay escuro
+        overlayCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        overlayCtx.fillRect(0, 0, bitmap.width, bitmap.height);
+        
+        // Limpar a área selecionada no overlay
+        overlayCtx.clearRect(area.x, area.y, area.width, area.height);
+        
+        // Desenhar a borda verde
+        overlayCtx.strokeStyle = '#4CAF50';
+        overlayCtx.lineWidth = 2;
+        overlayCtx.strokeRect(area.x, area.y, area.width, area.height);
+        
+        // Sobrepor o overlay na imagem original
+        ctx.drawImage(overlayCanvas, 0, 0);
+        
+        // Converter para blob
+        const finalBlob = await canvas.convertToBlob({ type: 'image/png' });
+        
+        // Converter blob para data URL
+        const reader = new FileReader();
+        return new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(finalBlob);
+        });
+    } catch (error) {
+        console.error('Erro ao capturar área:', error);
+        throw error;
     }
 }
 
@@ -107,8 +168,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
     
-    if (message.action === "captureScreen") {
-        captureVisibleTab(message.area).then(imageData => {
+    if (message.action === "captureFullScreen") {
+        captureFullScreen().then(imageData => {
+            sendResponse({ imageData });
+        });
+        return true;
+    }
+    
+    if (message.action === "captureSelectedArea") {
+        captureSelectedArea(message.area).then(imageData => {
             sendResponse({ imageData });
         });
         return true;
@@ -122,7 +190,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const screenshotData = elementData.screenshot;
         
         // Upload da screenshot para o ImgBB
-        uploadToImgBB(screenshotData).then(async imageUrl => {
+        uploadToImgBB(screenshotData).then(async (imageUrl) => {
             const config = await getConfig();
             if (!await checkConfig()) {
                 sendResponse({
@@ -138,11 +206,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     {
                         fields: {
                             "Elemento": JSON.stringify({
-                                tagName: elementData.tagName,
-                                id: elementData.id,
-                                className: elementData.className,
-                                textContent: elementData.textContent,
-                                xpath: elementData.xpath
+                                type: elementData.type,
+                                x: elementData.x,
+                                y: elementData.y,
+                                width: elementData.width,
+                                height: elementData.height
                             }),
                             "Feedback": message.feedback,
                             "URL": message.url,
@@ -168,14 +236,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         })
         .then(response => response.json())
         .then(data => {
-            console.log("Feedback enviado com sucesso para o Airtable:", data);
-            sendResponse({success: true, data});
+            if (data.records) {
+                sendResponse({ success: true });
+            } else {
+                sendResponse({
+                    success: false,
+                    error: 'Erro ao salvar no Airtable'
+                });
+            }
         })
         .catch(error => {
-            console.error("Erro ao processar feedback:", error);
-            sendResponse({success: false, error: error.message});
+            console.error('Erro ao enviar feedback:', error);
+            sendResponse({
+                success: false,
+                error: error.message
+            });
         });
-        
         return true;
     }
 });
