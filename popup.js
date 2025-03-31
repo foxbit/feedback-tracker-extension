@@ -125,13 +125,14 @@ function updateSelectedElement(elementInfo) {
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                 </svg>
-                <span class="font-medium">Elemento Capturado:</span>
+                <span class="font-medium">Área Capturada:</span>
             </div>
-            <div class="text-sm text-gray-600">
-                <div>Tipo: ${element.tagName.toLowerCase()}</div>
-                ${element.id ? `<div>ID: ${element.id}</div>` : ''}
-                ${element.className ? `<div>Classes: ${element.className}</div>` : ''}
-                <div>Texto: ${element.textContent}</div>
+            <div class="text-sm text-gray-600 mb-3">
+                <div>Posição: (${element.x}, ${element.y})</div>
+                <div>Dimensões: ${element.width}x${element.height} pixels</div>
+            </div>
+            <div class="border rounded-lg overflow-hidden mb-4">
+                <img src="${element.screenshot}" alt="Área capturada" class="w-full h-auto">
             </div>
         `;
         selectedElementDiv.classList.add('active');
@@ -140,7 +141,7 @@ function updateSelectedElement(elementInfo) {
             <svg xmlns="http://www.w3.org/2000/svg" class="button-icon" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
             </svg>
-            Elemento Capturado
+            Área Capturada
         `;
         updateSteps(2);
     } else {
@@ -150,7 +151,7 @@ function updateSelectedElement(elementInfo) {
             <svg xmlns="http://www.w3.org/2000/svg" class="button-icon" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd" />
             </svg>
-            Selecionar Elemento
+            Selecionar Área
         `;
         updateSteps(1);
     }
@@ -163,41 +164,14 @@ chrome.storage.local.get(["selectedElement"], (data) => {
 
 // Event listener para o botão de captura
 captureButton.addEventListener("click", () => {
-    console.log("Botão de captura clicado");
-    isCapturing = true;
-    captureButton.disabled = true;
-    captureButton.classList.add('loading');
-    
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (!tabs[0]) {
-            console.error("Nenhuma aba ativa encontrada");
-            showStatus("Erro: Nenhuma aba ativa encontrada", true);
-            captureButton.disabled = false;
-            captureButton.classList.remove('loading');
-            return;
-        }
-
-        console.log("Tab atual:", tabs[0].url);
-        
-        chrome.scripting.executeScript({
-            target: { tabId: tabs[0].id },
-            function: () => true
-        }, () => {
-            chrome.tabs.sendMessage(tabs[0].id, { action: "startCapture" }, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.log("Injetando content script...");
-                    chrome.scripting.executeScript({
-                        target: { tabId: tabs[0].id },
-                        files: ["content.js"]
-                    }, () => {
-                        setTimeout(() => {
-                            chrome.tabs.sendMessage(tabs[0].id, { action: "startCapture" });
-                        }, 100);
-                    });
-                }
-                captureButton.disabled = false;
-                captureButton.classList.remove('loading');
-            });
+    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'startCapture' }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError);
+                return;
+            }
+            // Fechar o popup
+            window.close();
         });
     });
 });

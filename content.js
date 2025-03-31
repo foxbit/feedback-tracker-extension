@@ -1,13 +1,16 @@
-// Variável global para controlar o modo de captura
+// Variáveis globais para controlar o modo de captura
 let captureMode = false;
-let hoveredElement = null;
-let selectedElement = null;
+let isDrawing = false;
+let startX = 0;
+let startY = 0;
+let selectionBox = null;
+let screenshotOverlay = null;
 
 // Função para criar o indicador visual
 function createIndicator() {
     const indicator = document.createElement('div');
     indicator.id = 'feedback-capture-indicator';
-    indicator.textContent = 'Modo de captura ativo - Clique em qualquer elemento para selecionar';
+    indicator.textContent = 'Clique e arraste para selecionar uma área';
     indicator.style.cssText = `
         position: fixed;
         top: 0;
@@ -21,194 +24,231 @@ function createIndicator() {
         font-family: Arial, sans-serif;
         font-size: 14px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        pointer-events: none;
     `;
     document.body.appendChild(indicator);
 }
 
-// Função para destacar elemento no hover
-function highlightElement(element) {
-    if (hoveredElement) {
-        hoveredElement.style.outline = '';
-        hoveredElement.style.background = '';
-    }
-    
-    if (element) {
-        element.style.outline = '3px solid #4CAF50';
-        element.style.background = `
-            linear-gradient(
-                45deg,
-                rgba(76, 175, 80, 0.2) 25%,
-                rgba(76, 175, 80, 0.1) 25%,
-                rgba(76, 175, 80, 0.1) 50%,
-                rgba(76, 175, 80, 0.2) 50%,
-                rgba(76, 175, 80, 0.2) 75%,
-                rgba(76, 175, 80, 0.1) 75%,
-                rgba(76, 175, 80, 0.1) 100%
-            )`;
-        element.style.backgroundSize = '20px 20px';
-        hoveredElement = element;
-    }
+// Função para criar a caixa de seleção
+function createSelectionBox() {
+    const box = document.createElement('div');
+    box.id = 'feedback-selection-box';
+    box.style.cssText = `
+        position: fixed;
+        border: 2px solid #4CAF50;
+        background-color: rgba(76, 175, 80, 0.1);
+        z-index: 999998;
+        pointer-events: none;
+        display: none;
+        user-select: none;
+    `;
+    document.body.appendChild(box);
+    return box;
 }
 
-// Função para capturar screenshot com área destacada
-async function captureScreenshotWithHighlight(element) {
-    // Salvar o estilo original
-    const originalOutline = element.style.outline;
-    const originalBackground = element.style.background;
-    const originalBackgroundSize = element.style.backgroundSize;
-    
-    // Aplicar destaque para screenshot
-    element.style.outline = '3px solid #FF4081';
-    element.style.background = `
-        linear-gradient(
-            45deg,
-            rgba(255, 64, 129, 0.3) 25%,
-            rgba(255, 64, 129, 0.2) 25%,
-            rgba(255, 64, 129, 0.2) 50%,
-            rgba(255, 64, 129, 0.3) 50%,
-            rgba(255, 64, 129, 0.3) 75%,
-            rgba(255, 64, 129, 0.2) 75%,
-            rgba(255, 64, 129, 0.2) 100%
-        )`;
-    element.style.backgroundSize = '20px 20px';
-    
-    // Scroll para o elemento
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
-    // Esperar um pouco para garantir que o scroll terminou
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Capturar as dimensões do elemento e da viewport
-    const rect = element.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    
-    // Calcular a área de captura
-    const captureArea = {
-        x: Math.max(0, rect.left - 100),
-        y: Math.max(0, rect.top - 100),
-        width: Math.min(viewportWidth, rect.width + 200),
-        height: Math.min(viewportHeight, rect.height + 200)
-    };
-    
-    // Enviar mensagem para o background script fazer a captura
-    chrome.runtime.sendMessage({
-        action: "captureScreen",
-        area: captureArea
-    }, async (response) => {
-        if (response && response.imageData) {
-            // Restaurar o estilo original do elemento
-            element.style.outline = originalOutline;
-            element.style.background = originalBackground;
-            element.style.backgroundSize = originalBackgroundSize;
-            
-            // Salvar os dados da captura
-            const elementInfo = {
-                tagName: element.tagName,
-                id: element.id,
-                className: element.className,
-                textContent: element.textContent.substring(0, 50) + (element.textContent.length > 50 ? '...' : ''),
-                xpath: getXPath(element),
-                screenshot: response.imageData
-            };
-            
-            chrome.storage.local.set({ selectedElement: JSON.stringify(elementInfo) });
-        }
-    });
+// Função para criar o overlay com a screenshot
+function createScreenshotOverlay(imageData) {
+    const overlay = document.createElement('div');
+    overlay.id = 'feedback-screenshot-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999997;
+        cursor: crosshair;
+        user-select: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    `;
+
+    const imageContainer = document.createElement('div');
+    imageContainer.style.cssText = `
+        position: relative;
+        max-width: 100%;
+        max-height: 100%;
+        overflow: auto;
+    `;
+
+    const img = document.createElement('img');
+    img.src = imageData;
+    img.style.cssText = `
+        max-width: 100%;
+        height: auto;
+        display: block;
+    `;
+
+    imageContainer.appendChild(img);
+    overlay.appendChild(imageContainer);
+    document.body.appendChild(overlay);
+    return overlay;
 }
 
 // Função para iniciar o modo de captura
-function startCaptureMode() {
+async function startCaptureMode() {
     captureMode = true;
-    createIndicator();
-    document.body.style.cursor = 'crosshair';
     
-    // Adicionar listeners para hover e clique
-    document.addEventListener("mouseover", handleElementHover);
-    document.addEventListener("click", handleElementCapture);
+    // Criar a caixa de seleção (que está invisível inicialmente)
+    selectionBox = createSelectionBox();
+    
+    // Capturar a tela primeiro
+    chrome.runtime.sendMessage({ action: "captureFullScreen" }, async (response) => {
+        if (response && response.imageData) {
+            // Criar overlay com a screenshot
+            screenshotOverlay = createScreenshotOverlay(response.imageData);
+            
+            // Só criar o indicador depois que o overlay estiver pronto
+            createIndicator();
+            
+            // Adicionar listeners para mouse no overlay
+            screenshotOverlay.addEventListener("mousedown", handleMouseDown);
+            screenshotOverlay.addEventListener("mousemove", handleMouseMove);
+            screenshotOverlay.addEventListener("mouseup", handleMouseUp);
+            
+            // Prevenir seleção de texto
+            document.body.style.userSelect = 'none';
+            document.body.style.webkitUserSelect = 'none';
+            document.body.style.mozUserSelect = 'none';
+            document.body.style.msUserSelect = 'none';
+        }
+    });
 }
 
 // Função para finalizar o modo de captura
 function endCaptureMode() {
     captureMode = false;
     
-    // Remover o indicador visual
+    // Remover elementos visuais
+    const indicator = document.getElementById('feedback-capture-indicator');
+    if (indicator) indicator.remove();
+    
+    if (screenshotOverlay) {
+        screenshotOverlay.remove();
+        screenshotOverlay = null;
+    }
+    
+    if (selectionBox) {
+        selectionBox.remove();
+        selectionBox = null;
+    }
+    
+    // Restaurar seleção de texto
+    document.body.style.userSelect = '';
+    document.body.style.webkitUserSelect = '';
+    document.body.style.mozUserSelect = '';
+    document.body.style.msUserSelect = '';
+}
+
+// Função para lidar com o início da seleção
+function handleMouseDown(event) {
+    if (!captureMode) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    isDrawing = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    
+    // Remover o indicador quando começar a desenhar
     const indicator = document.getElementById('feedback-capture-indicator');
     if (indicator) {
         indicator.remove();
     }
     
-    // Remover highlight do elemento
-    if (hoveredElement) {
-        hoveredElement.style.outline = '';
-        hoveredElement.style.background = '';
-        hoveredElement.style.backgroundSize = '';
-        hoveredElement = null;
-    }
+    selectionBox.style.display = 'block';
+    selectionBox.style.left = startX + 'px';
+    selectionBox.style.top = startY + 'px';
+    selectionBox.style.width = '0';
+    selectionBox.style.height = '0';
+}
+
+// Função para lidar com o movimento do mouse durante a seleção
+function handleMouseMove(event) {
+    if (!isDrawing) return;
     
-    // Restaurar o cursor
-    document.body.style.cursor = 'default';
+    event.preventDefault();
+    event.stopPropagation();
     
-    // Remover os listeners
-    document.removeEventListener("mouseover", handleElementHover);
-    document.removeEventListener("click", handleElementCapture);
+    const currentX = event.clientX;
+    const currentY = event.clientY;
+    
+    const width = Math.abs(currentX - startX);
+    const height = Math.abs(currentY - startY);
+    
+    selectionBox.style.width = width + 'px';
+    selectionBox.style.height = height + 'px';
+    selectionBox.style.left = (currentX > startX ? startX : currentX) + 'px';
+    selectionBox.style.top = (currentY > startY ? startY : currentY) + 'px';
 }
 
-// Função para remover o highlight do elemento selecionado
-function removeHighlight() {
-    if (selectedElement) {
-        selectedElement.style.outline = '';
-        selectedElement.style.background = '';
-        selectedElement.style.backgroundSize = '';
-        selectedElement = null;
-    }
-}
-
-// Função para lidar com o hover sobre elementos
-function handleElementHover(event) {
-    if (captureMode) {
-        highlightElement(event.target);
-    }
-}
-
-// Função para lidar com a captura do elemento
-async function handleElementCapture(event) {
-    if (captureMode) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        const element = event.target;
-        selectedElement = element;
-        
-        // Capturar screenshot com área destacada
-        await captureScreenshotWithHighlight(element);
-        
-        // Finalizar o modo de captura
-        endCaptureMode();
-        
-        // Notificar o usuário
-        const notification = document.createElement('div');
-        notification.textContent = 'Elemento capturado! Adicione o feedback no popup.';
-        notification.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(33, 150, 243, 0.9);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            z-index: 999999;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        `;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
+// Função para lidar com o final da seleção
+async function handleMouseUp(event) {
+    if (!isDrawing) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    isDrawing = false;
+    
+    // Capturar a área selecionada
+    const rect = selectionBox.getBoundingClientRect();
+    const captureArea = {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height
+    };
+    
+    // Enviar mensagem para o background script fazer a captura da área
+    chrome.runtime.sendMessage({
+        action: "captureSelectedArea",
+        area: captureArea
+    }, async (response) => {
+        if (response && response.imageData) {
+            // Salvar os dados da captura
+            const elementInfo = {
+                type: 'area',
+                x: captureArea.x,
+                y: captureArea.y,
+                width: captureArea.width,
+                height: captureArea.height,
+                screenshot: response.imageData
+            };
+            
+            chrome.storage.local.set({ selectedElement: JSON.stringify(elementInfo) });
+            
+            // Notificar o usuário
+            const notification = document.createElement('div');
+            notification.textContent = 'Área capturada! Adicione o feedback no popup.';
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: rgba(33, 150, 243, 0.9);
+                color: white;
+                padding: 10px 20px;
+                border-radius: 4px;
+                z-index: 999999;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                pointer-events: none;
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    });
+    
+    // Finalizar o modo de captura
+    endCaptureMode();
 }
 
 // Função para gerar XPath do elemento
@@ -246,11 +286,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true });
     } else if (message.action === "stopCapture") {
         captureMode = false;
-        removeHighlight();
         endCaptureMode();
         sendResponse({ success: true });
     } else if (message.action === "feedbackSent") {
-        removeHighlight();
         sendResponse({ success: true });
     }
 });
