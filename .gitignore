@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+airtable.txt
 
 # Arquivos de sistema
 .DS_Store
