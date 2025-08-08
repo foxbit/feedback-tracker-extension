@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste da Extensão</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-area {
+            background: #e3f2fd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            border: 2px dashed #2196f3;
+        }
+        .button {
+            background: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Página de Teste da Extensão Feedback Tracker</h1>
+        
+        <div class="test-area">
+            <h2>Área de Teste 1</h2>
+            <p>Esta é uma área que você pode selecionar para testar a captura de elementos.</p>
+            <button class="button">Botão de Teste</button>
+        </div>
+        
+        <div class="test-area">
+            <h2>Área de Teste 2</h2>
+            <p>Outra área para testar a seleção de elementos diferentes.</p>
+            <input type="text" placeholder="Campo de texto de teste" style="padding: 8px; margin: 10px 0; width: 200px;">
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #fff3cd; border-radius: 5px;">
+            <h3>Instruções:</h3>
+            <ol>
+                <li>Abra a extensão clicando no ícone na barra de ferramentas</li>
+                <li>Clique no botão "Selecionar Elemento"</li>
+                <li>Selecione uma das áreas de teste acima</li>
+                <li>Verifique se a captura funciona corretamente</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        console.log('Página de teste carregada');
+        
+        // Adicionar alguns logs para debug
+        window.addEventListener('load', () => {
+            console.log('Página totalmente carregada');
+        });
+    </script>
+</body>
+</html>

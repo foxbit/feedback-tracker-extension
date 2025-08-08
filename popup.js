@@ -5,7 +5,9 @@ const resetButton = document.getElementById("resetBtn");
 const feedbackInput = document.getElementById("feedback");
 const selectedElementDiv = document.getElementById("selectedElement");
 const statusMessageDiv = document.getElementById("statusMessage");
+const projectSelect = document.getElementById("projectSelect");
 const userSelect = document.getElementById("userSelect");
+const statusSelect = document.getElementById("statusSelect");
 const steps = document.querySelectorAll('.step');
 const step1Content = document.getElementById("step1Content");
 const step2Content = document.getElementById("step2Content");
@@ -13,17 +15,75 @@ const step2Content = document.getElementById("step2Content");
 // Estado inicial
 let isCapturing = false;
 let currentStep = 1;
+let selectedProjectKey = null;
 let selectedUserId = null;
 let selectedUserName = null;
+let selectedStatusId = null;
+let selectedElement = null;
 
-// Carregar usuários ao iniciar
-loadUsers();
+// Carregar projetos ao iniciar
+loadProjects();
 
-// Função para carregar usuários
-async function loadUsers() {
+// Função para carregar projetos
+async function loadProjects() {
     try {
         const response = await new Promise((resolve) => {
-            chrome.runtime.sendMessage({ action: "getUsers" }, (response) => {
+            chrome.runtime.sendMessage({ action: "getProjects" }, (response) => {
+                if (chrome.runtime.lastError) {
+                    resolve({ success: false, error: chrome.runtime.lastError });
+                } else {
+                    resolve(response);
+                }
+            });
+        });
+
+        if (response.success && response.projects) {
+            // Limpar opções existentes
+            projectSelect.innerHTML = '<option value="">Selecione um projeto</option>';
+            
+            // Ordenar projetos alfabeticamente por nome
+            const sortedProjects = response.projects.sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Adicionar projetos ao select
+            sortedProjects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project.key;
+                option.textContent = `${project.key} - ${project.name}`;
+                projectSelect.appendChild(option);
+            });
+
+            // Carregar projeto salvo
+            chrome.storage.local.get(['selectedProjectKey'], (data) => {
+                if (data.selectedProjectKey) {
+                    projectSelect.value = data.selectedProjectKey;
+                    selectedProjectKey = data.selectedProjectKey;
+                    loadUsers(selectedProjectKey);
+                }
+            });
+        } else {
+            console.error('Erro ao carregar projetos:', response.error);
+            showStatus('Erro ao carregar projetos. Verifique as configurações.', true);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar projetos:', error);
+        showStatus('Erro ao carregar projetos.', true);
+    }
+}
+
+// Função para carregar usuários
+async function loadUsers(projectKey = null) {
+    if (!projectKey) {
+        userSelect.innerHTML = '<option value="">Selecione um usuário</option>';
+        userSelect.disabled = true;
+        return;
+    }
+
+    try {
+        userSelect.disabled = true;
+        userSelect.innerHTML = '<option value="">Carregando usuários...</option>';
+        
+        const response = await new Promise((resolve) => {
+            chrome.runtime.sendMessage({ action: "getUsers", projectKey }, (response) => {
                 if (chrome.runtime.lastError) {
                     resolve({ success: false, error: chrome.runtime.lastError });
                 } else {
@@ -36,14 +96,19 @@ async function loadUsers() {
             // Limpar opções existentes
             userSelect.innerHTML = '<option value="">Selecione um usuário</option>';
             
+            // Ordenar usuários alfabeticamente por nome
+            const sortedUsers = response.users.sort((a, b) => a.displayName.localeCompare(b.displayName));
+            
             // Adicionar usuários ao select
-            response.users.forEach(user => {
+            sortedUsers.forEach(user => {
                 const option = document.createElement('option');
                 option.value = user.id;
                 option.textContent = user.name;
                 option.dataset.name = user.displayName;
                 userSelect.appendChild(option);
             });
+
+            userSelect.disabled = false;
 
             // Carregar usuário salvo
             chrome.storage.local.get(['selectedUserId'], (data) => {
@@ -65,6 +130,85 @@ async function loadUsers() {
     }
 }
 
+// Função para carregar status do projeto
+async function loadProjectStatuses(projectKey) {
+    try {
+        console.log('Carregando status para projeto:', projectKey);
+        statusSelect.disabled = true;
+        statusSelect.innerHTML = '<option value="">Carregando status...</option>';
+        
+        const response = await new Promise((resolve) => {
+            chrome.runtime.sendMessage({ action: "getProjectStatuses", projectKey }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Erro no chrome.runtime:', chrome.runtime.lastError);
+                    resolve({ success: false, error: chrome.runtime.lastError });
+                } else {
+                    console.log('Resposta recebida:', response);
+                    resolve(response);
+                }
+            });
+        });
+
+        if (response.success && response.statuses) {
+            console.log('Status carregados com sucesso:', response.statuses.length, 'itens');
+            // Limpar opções existentes
+            statusSelect.innerHTML = '<option value="">Selecione um status</option>';
+            
+            // Adicionar status ao select
+            response.statuses.forEach(status => {
+                const option = document.createElement('option');
+                option.value = status.id;
+                option.textContent = status.name;
+                option.dataset.category = status.statusCategory.key;
+                statusSelect.appendChild(option);
+            });
+            
+            // Selecionar automaticamente o primeiro status (backlog)
+            if (response.statuses.length > 0) {
+                statusSelect.value = response.statuses[0].id;
+                selectedStatusId = response.statuses[0].id;
+                console.log('Status padrão selecionado:', response.statuses[0].name);
+            }
+            
+            statusSelect.disabled = false;
+            console.log('StatusSelect habilitado');
+        } else {
+            console.error('Falha ao carregar status:', response);
+            statusSelect.innerHTML = '<option value="">Erro ao carregar status</option>';
+            console.error('Erro ao carregar status:', response.error);
+        }
+    } catch (error) {
+        console.error('Exceção ao carregar status:', error);
+        statusSelect.innerHTML = '<option value="">Erro ao carregar status</option>';
+        console.error('Erro ao carregar status do projeto:', error);
+    }
+}
+
+// Event listener para seleção de projeto
+projectSelect.addEventListener('change', (event) => {
+    selectedProjectKey = event.target.value;
+    
+    // Salvar projeto selecionado
+    chrome.storage.local.set({ selectedProjectKey });
+    
+    // Carregar usuários do projeto selecionado
+    if (selectedProjectKey) {
+        loadUsers(selectedProjectKey);
+        // Carregar status do projeto selecionado
+        loadProjectStatuses(selectedProjectKey);
+    } else {
+        userSelect.innerHTML = '<option value="">Selecione um usuário</option>';
+        userSelect.disabled = true;
+        selectedUserId = null;
+        selectedUserName = null;
+        
+        // Limpar seleção de status
+        statusSelect.innerHTML = '<option value="">Selecione um status</option>';
+        statusSelect.disabled = true;
+        selectedStatusId = null;
+    }
+});
+
 // Event listener para o select de usuários
 userSelect.addEventListener('change', (event) => {
     selectedUserId = event.target.value;
@@ -74,6 +218,11 @@ userSelect.addEventListener('change', (event) => {
         selectedUserId: selectedUserId,
         selectedUserName: selectedUserName 
     });
+});
+
+// Event listener para seleção de status
+statusSelect.addEventListener('change', (event) => {
+    selectedStatusId = event.target.value;
 });
 
 // Função para atualizar os passos
@@ -118,6 +267,8 @@ function showStatus(message, isError = false) {
 
 // Função para atualizar o elemento selecionado na interface
 function updateSelectedElement(elementInfo) {
+    selectedElement = elementInfo;
+    
     if (elementInfo) {
         const element = JSON.parse(elementInfo);
         selectedElementDiv.innerHTML = `
@@ -162,22 +313,117 @@ chrome.storage.local.get(["selectedElement"], (data) => {
     updateSelectedElement(data.selectedElement);
 });
 
+// Função para restaurar estado do popup
+function restorePopupState() {
+    chrome.storage.local.get(['popupState'], (data) => {
+        if (data.popupState) {
+            console.log('Restaurando estado do popup:', data.popupState);
+            
+            // Restaurar valores das variáveis
+            selectedProjectKey = data.popupState.selectedProjectKey;
+            selectedUserId = data.popupState.selectedUserId;
+            selectedUserName = data.popupState.selectedUserName;
+            selectedStatusId = data.popupState.selectedStatusId;
+            
+            // Restaurar texto do feedback
+            if (data.popupState.feedbackText) {
+                feedbackInput.value = data.popupState.feedbackText;
+            }
+            
+            // Restaurar seleções dos selects
+            if (selectedProjectKey) {
+                projectSelect.value = selectedProjectKey;
+                // Recarregar usuários e status para o projeto selecionado
+                loadUsers(selectedProjectKey);
+                loadProjectStatuses(selectedProjectKey);
+                
+                // Aguardar um pouco para os selects carregarem e então restaurar os valores
+                setTimeout(() => {
+                    if (selectedUserId) {
+                        userSelect.value = selectedUserId;
+                    }
+                    if (selectedStatusId) {
+                        statusSelect.value = selectedStatusId;
+                    }
+                }, 500);
+            }
+            
+            // Limpar estado salvo após restaurar
+            chrome.storage.local.remove(['popupState']);
+        }
+    });
+}
+
+// Restaurar estado do popup ao carregar
+restorePopupState();
+
 // Event listener para o botão de captura
 captureButton.addEventListener("click", () => {
+    console.log('Botão de captura clicado');
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'startCapture' }, (response) => {
-            if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError);
-                return;
+        console.log('Tab ativa encontrada:', tabs[0]);
+        
+        // Primeiro, verificar se o content script já está presente
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'ping' }, (response) => {
+            if (chrome.runtime.lastError || !response) {
+                // Content script não está presente, injetar
+                console.log('Content script não encontrado, injetando...');
+                chrome.scripting.executeScript({
+                    target: { tabId: tabs[0].id },
+                    files: ['content.js']
+                }, () => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Erro ao injetar content script:', chrome.runtime.lastError);
+                        showStatus('Erro: Não foi possível injetar o script na página. Verifique se a página permite extensões.', true);
+                        return;
+                    }
+                    
+                    // Aguardar um pouco para o script ser carregado
+                    setTimeout(() => {
+                        startCaptureProcess(tabs[0].id);
+                    }, 100);
+                });
+            } else {
+                // Content script já está presente
+                console.log('Content script já presente, iniciando captura...');
+                startCaptureProcess(tabs[0].id);
             }
-            // Fechar o popup
-            window.close();
         });
     });
 });
 
+// Função auxiliar para iniciar o processo de captura
+function startCaptureProcess(tabId) {
+    // Salvar estado atual antes de fechar o popup
+    chrome.storage.local.set({
+        'popupState': {
+            selectedProjectKey: selectedProjectKey,
+            selectedUserId: selectedUserId,
+            selectedUserName: selectedUserName,
+            selectedStatusId: selectedStatusId,
+            feedbackText: feedbackInput.value
+        }
+    }, () => {
+        chrome.tabs.sendMessage(tabId, { action: 'startCapture' }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error('Erro ao enviar mensagem:', chrome.runtime.lastError);
+                showStatus('Erro: Não foi possível iniciar a captura. Recarregue a página e tente novamente.', true);
+                return;
+            }
+            console.log('Mensagem enviada com sucesso:', response);
+            // Fechar o popup
+            window.close();
+        });
+    });
+}
+
 // Função para enviar feedback
 async function sendFeedback() {
+    if (!selectedProjectKey) {
+        showStatus('Por favor, selecione um projeto', true);
+        return;
+    }
+    
     if (!selectedElement || !selectedUserId) {
         showStatus('Por favor, selecione um elemento e um usuário', true);
         return;
@@ -198,7 +444,9 @@ async function sendFeedback() {
             element: selectedElement,
             feedback: feedback,
             userId: selectedUserId,
-            userName: selectedUserName
+            userName: selectedUserName,
+            projectKey: selectedProjectKey,
+            statusId: selectedStatusId
         });
 
         if (response.success) {
@@ -262,7 +510,9 @@ sendButton.addEventListener("click", async () => {
                         feedback: feedback,
                         url: tabs[0].url,
                         userId: selectedUserId,
-                        userName: selectedUserName
+                        userName: selectedUserName,
+                        projectKey: selectedProjectKey,
+                        statusId: selectedStatusId
                     }, (response) => {
                         if (chrome.runtime.lastError) {
                             console.error("Erro ao enviar mensagem:", chrome.runtime.lastError);
@@ -287,10 +537,13 @@ sendButton.addEventListener("click", async () => {
                 }
             });
             
-            showStatus("Feedback enviado com sucesso!");
+            const successMessage = data.issueKey ? 
+                `Feedback enviado com sucesso! Issue criado: ${data.issueKey}` : 
+                "Feedback enviado com sucesso!";
+            showStatus(successMessage);
             resetForm();
         } else {
-            throw new Error("Erro ao enviar feedback. Tente novamente.");
+            throw new Error(data.error || "Erro ao enviar feedback. Tente novamente.");
         }
     } catch (error) {
         console.error("Erro durante o envio:", error);
@@ -313,14 +566,16 @@ function resetForm() {
     chrome.storage.local.remove(["selectedElement"]);
     updateSelectedElement(null);
     updateSteps(1);
+    selectedElement = null;
     // Não resetamos o usuário selecionado para manter a preferência
 }
 
 // Função para verificar configurações
 async function checkConfiguration() {
     return new Promise((resolve) => {
-        chrome.storage.sync.get(['airtableToken', 'airtableBase', 'imgbbKey'], (data) => {
-            const hasConfig = data.airtableToken && data.airtableBase && data.imgbbKey;
+        chrome.storage.sync.get(['jiraUrl', 'jiraEmail', 'jiraToken', 'imgbbKey'], (data) => {
+            // Projeto agora é opcional - não é mais obrigatório
+            const hasConfig = data.jiraUrl && data.jiraEmail && data.jiraToken && data.imgbbKey;
             resolve(hasConfig);
         });
     });
@@ -329,12 +584,16 @@ async function checkConfiguration() {
 // Função para mostrar aviso de configuração
 function showConfigurationWarning() {
     const warning = document.createElement('div');
+    warning.id = 'configurationWarning';
     warning.className = 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4';
     warning.innerHTML = `
         <p class="font-bold">Configuração Necessária</p>
         <p>Por favor, configure as chaves de API nas opções da extensão antes de usar.</p>
         <button id="openOptions" class="mt-2 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
             Abrir Configurações
+        </button>
+        <button id="testConfig" class="mt-2 ml-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            Testar Configuração
         </button>
     `;
     
@@ -344,9 +603,57 @@ function showConfigurationWarning() {
         chrome.runtime.openOptionsPage();
     });
     
+    document.getElementById('testConfig').addEventListener('click', async () => {
+        await testConfigurationFromPopup();
+    });
+    
     // Desabilitar botões
     captureButton.disabled = true;
     sendButton.disabled = true;
+}
+
+// Função para remover aviso de configuração
+function removeConfigurationWarning() {
+    const warning = document.getElementById('configurationWarning');
+    if (warning) {
+        warning.remove();
+    }
+    
+    // Reabilitar botões
+    captureButton.disabled = false;
+    sendButton.disabled = false;
+}
+
+// Função para testar configuração a partir do popup
+async function testConfigurationFromPopup() {
+    try {
+        const hasConfig = await checkConfiguration();
+        if (hasConfig) {
+            // Testar conexão com Jira
+            const response = await new Promise((resolve) => {
+                chrome.runtime.sendMessage({ action: "testConnection" }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        resolve({ success: false, error: chrome.runtime.lastError.message });
+                    } else {
+                        resolve(response);
+                    }
+                });
+            });
+            
+            if (response.success) {
+                removeConfigurationWarning();
+                showStatus('Configuração testada com sucesso!');
+                // Recarregar projetos agora que a configuração está funcionando
+                loadProjects();
+            } else {
+                showStatus(`Erro na configuração: ${response.error}`, true);
+            }
+        } else {
+            showStatus('Por favor, preencha todos os campos obrigatórios nas configurações.', true);
+        }
+    } catch (error) {
+        showStatus(`Erro ao testar configuração: ${error.message}`, true);
+    }
 }
 
 // Verificar configuração ao carregar
@@ -354,5 +661,26 @@ window.addEventListener('load', async () => {
     const hasConfig = await checkConfiguration();
     if (!hasConfig) {
         showConfigurationWarning();
+    } else {
+        // Se tem configuração, testar se está funcionando
+        try {
+            const response = await new Promise((resolve) => {
+                chrome.runtime.sendMessage({ action: "testConnection" }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        resolve({ success: false, error: chrome.runtime.lastError.message });
+                    } else {
+                        resolve(response);
+                    }
+                });
+            });
+            
+            if (!response.success) {
+                // Se a configuração existe mas não está funcionando, mostrar aviso
+                showConfigurationWarning();
+            }
+        } catch (error) {
+            // Se houver erro no teste, mostrar aviso
+            showConfigurationWarning();
+        }
     }
 });

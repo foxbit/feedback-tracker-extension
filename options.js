@@ -1,15 +1,19 @@
 // Elementos da interface
-const airtableTokenInput = document.getElementById('airtableToken');
-const airtableBaseInput = document.getElementById('airtableBase');
+const jiraUrlInput = document.getElementById('jiraUrl');
+const jiraEmailInput = document.getElementById('jiraEmail');
+const jiraTokenInput = document.getElementById('jiraToken');
+const jiraProjectInput = document.getElementById('jiraProject');
 const imgbbKeyInput = document.getElementById('imgbbKey');
 const saveButton = document.getElementById('saveConfig');
 const testButton = document.getElementById('testConfig');
 const statusMessage = document.getElementById('statusMessage');
 
 // Carregar configurações salvas
-chrome.storage.sync.get(['airtableToken', 'airtableBase', 'imgbbKey'], (data) => {
-    if (data.airtableToken) airtableTokenInput.value = data.airtableToken;
-    if (data.airtableBase) airtableBaseInput.value = data.airtableBase;
+chrome.storage.sync.get(['jiraUrl', 'jiraEmail', 'jiraToken', 'jiraProject', 'imgbbKey'], (data) => {
+    if (data.jiraUrl) jiraUrlInput.value = data.jiraUrl;
+    if (data.jiraEmail) jiraEmailInput.value = data.jiraEmail;
+    if (data.jiraToken) jiraTokenInput.value = data.jiraToken;
+    if (data.jiraProject) jiraProjectInput.value = data.jiraProject;
     if (data.imgbbKey) imgbbKeyInput.value = data.imgbbKey;
 });
 
@@ -26,12 +30,21 @@ function showStatus(message, isError = false) {
 
 // Função para validar as configurações
 function validateConfig() {
-    const airtableToken = airtableTokenInput.value.trim();
-    const airtableBase = airtableBaseInput.value.trim();
+    const jiraUrl = jiraUrlInput.value.trim();
+    const jiraEmail = jiraEmailInput.value.trim();
+    const jiraToken = jiraTokenInput.value.trim();
+    const jiraProject = jiraProjectInput.value.trim();
     const imgbbKey = imgbbKeyInput.value.trim();
     
-    if (!airtableToken || !airtableBase || !imgbbKey) {
-        showStatus('Por favor, preencha todos os campos', true);
+    // Campos obrigatórios (projeto agora é opcional)
+    if (!jiraUrl || !jiraEmail || !jiraToken || !imgbbKey) {
+        showStatus('Por favor, preencha todos os campos obrigatórios', true);
+        return false;
+    }
+    
+    // Validar formato da URL do Jira
+    if (!jiraUrl.includes('.atlassian.net') && !jiraUrl.includes('jira')) {
+        showStatus('URL do Jira deve ser válida (ex: https://suaempresa.atlassian.net)', true);
         return false;
     }
     
@@ -46,19 +59,53 @@ async function testConfiguration() {
     testButton.textContent = 'Testando...';
     
     try {
-        // Testar Airtable
-        const airtableResponse = await fetch(
-            `https://api.airtable.com/v0/${airtableBaseInput.value}/Users?maxRecords=1`,
+        // Testar conexão com Jira
+        const jiraUrl = jiraUrlInput.value.trim();
+        const jiraEmail = jiraEmailInput.value.trim();
+        const jiraToken = jiraTokenInput.value.trim();
+        const jiraProject = jiraProjectInput.value.trim();
+        
+        // Criar credenciais base64 para autenticação básica
+        const credentials = btoa(`${jiraEmail}:${jiraToken}`);
+        
+        // Testar conexão básica com Jira (buscar informações do usuário)
+        const userResponse = await fetch(
+            `${jiraUrl}/rest/api/3/myself`,
             {
                 headers: {
-                    'Authorization': `Bearer ${airtableTokenInput.value}`,
-                    'Content-Type': 'application/json'
+                    'Authorization': `Basic ${credentials}`,
+                    'Accept': 'application/json'
                 }
             }
         );
         
-        if (!airtableResponse.ok) {
-            throw new Error('Falha na conexão com o Airtable');
+        if (!userResponse.ok) {
+            if (userResponse.status === 401) {
+                throw new Error('Credenciais inválidas. Verifique email e token.');
+            } else {
+                throw new Error(`Erro na conexão com Jira: ${userResponse.status}`);
+            }
+        }
+        
+        // Testar projeto apenas se foi especificado
+        if (jiraProject) {
+            const projectResponse = await fetch(
+                `${jiraUrl}/rest/api/3/project/${jiraProject}`,
+                {
+                    headers: {
+                        'Authorization': `Basic ${credentials}`,
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+            
+            if (!projectResponse.ok) {
+                if (projectResponse.status === 404) {
+                    throw new Error('Projeto não encontrado. Verifique a chave do projeto.');
+                } else {
+                    throw new Error(`Erro ao acessar projeto: ${projectResponse.status}`);
+                }
+            }
         }
         
         // Testar ImgBB (apenas verificar se a chave tem o formato correto)
@@ -67,7 +114,8 @@ async function testConfiguration() {
             throw new Error('Chave do ImgBB parece inválida');
         }
         
-        showStatus('Configurações testadas com sucesso!');
+        const projectMessage = jiraProject ? ' e projeto' : '';
+        showStatus(`Configurações testadas com sucesso! Jira${projectMessage} e ImgBB conectados.`);
     } catch (error) {
         showStatus(`Erro ao testar configurações: ${error.message}`, true);
     } finally {
@@ -81,8 +129,10 @@ function saveConfiguration() {
     if (!validateConfig()) return;
     
     const config = {
-        airtableToken: airtableTokenInput.value.trim(),
-        airtableBase: airtableBaseInput.value.trim(),
+        jiraUrl: jiraUrlInput.value.trim(),
+        jiraEmail: jiraEmailInput.value.trim(),
+        jiraToken: jiraTokenInput.value.trim(),
+        jiraProject: jiraProjectInput.value.trim(),
         imgbbKey: imgbbKeyInput.value.trim()
     };
     
@@ -97,4 +147,4 @@ function saveConfiguration() {
 
 // Event listeners
 saveButton.addEventListener('click', saveConfiguration);
-testButton.addEventListener('click', testConfiguration); 
+testButton.addEventListener('click', testConfiguration);

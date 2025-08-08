@@ -8,6 +8,12 @@ let screenshotOverlay = null;
 
 // Função para criar o indicador visual
 function createIndicator() {
+    // Verificar se já existe e remover
+    const existing = document.getElementById('feedback-capture-indicator');
+    if (existing) {
+        existing.remove();
+    }
+    
     const indicator = document.createElement('div');
     indicator.id = 'feedback-capture-indicator';
     indicator.textContent = 'Clique e arraste para selecionar uma área';
@@ -31,6 +37,12 @@ function createIndicator() {
 
 // Função para criar a caixa de seleção
 function createSelectionBox() {
+    // Verificar se já existe e remover
+    const existing = document.getElementById('feedback-selection-box');
+    if (existing) {
+        existing.remove();
+    }
+    
     const box = document.createElement('div');
     box.id = 'feedback-selection-box';
     box.style.cssText = `
@@ -48,6 +60,12 @@ function createSelectionBox() {
 
 // Função para criar o overlay com a screenshot
 function createScreenshotOverlay(imageData) {
+    // Verificar se já existe e remover
+    const existing = document.getElementById('feedback-screenshot-overlay');
+    if (existing) {
+        existing.remove();
+    }
+    
     const overlay = document.createElement('div');
     overlay.id = 'feedback-screenshot-overlay';
     overlay.style.cssText = `
@@ -89,21 +107,39 @@ function createScreenshotOverlay(imageData) {
 
 // Função para iniciar o modo de captura
 async function startCaptureMode() {
+    console.log('startCaptureMode chamada');
+    
+    // Limpar elementos existentes primeiro
+    endCaptureMode();
+    
     captureMode = true;
     
     // Criar a caixa de seleção (que está invisível inicialmente)
+    console.log('Criando caixa de seleção');
     selectionBox = createSelectionBox();
     
     // Capturar a tela primeiro
+    console.log('Capturando tela');
     chrome.runtime.sendMessage({ action: "captureFullScreen" }, async (response) => {
+        if (chrome.runtime.lastError) {
+            console.error('Erro no chrome.runtime ao capturar tela:', chrome.runtime.lastError);
+            alert('Erro: Não foi possível iniciar a captura. Recarregue a página e tente novamente.');
+            captureMode = false;
+            return;
+        }
+        
         if (response && response.imageData) {
+            console.log('Screenshot capturada com sucesso');
             // Criar overlay com a screenshot
+            console.log('Criando overlay com screenshot');
             screenshotOverlay = createScreenshotOverlay(response.imageData);
             
             // Só criar o indicador depois que o overlay estiver pronto
+            console.log('Criando indicador visual');
             createIndicator();
             
             // Adicionar listeners para mouse no overlay
+            console.log('Adicionando event listeners');
             screenshotOverlay.addEventListener("mousedown", handleMouseDown);
             screenshotOverlay.addEventListener("mousemove", handleMouseMove);
             screenshotOverlay.addEventListener("mouseup", handleMouseUp);
@@ -113,6 +149,12 @@ async function startCaptureMode() {
             document.body.style.webkitUserSelect = 'none';
             document.body.style.mozUserSelect = 'none';
             document.body.style.msUserSelect = 'none';
+            
+            console.log('Modo de captura ativado');
+        } else {
+            console.error('Resposta inválida ao capturar tela:', response);
+            alert('Erro: Não foi possível capturar a tela. Recarregue a página e tente novamente.');
+            captureMode = false;
         }
     });
 }
@@ -279,9 +321,17 @@ function getXPath(element) {
     return path;
 }
 
+// Log para verificar se o content script foi carregado
+console.log('Content script carregado');
+
 // Listener para mensagens do popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "startCapture") {
+    console.log('Mensagem recebida no content script:', message);
+    if (message.action === "ping") {
+        // Responder ao ping para confirmar que o content script está presente
+        sendResponse({ success: true, present: true });
+    } else if (message.action === "startCapture") {
+        console.log('Iniciando modo de captura');
         startCaptureMode();
         sendResponse({ success: true });
     } else if (message.action === "stopCapture") {
@@ -291,4 +341,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else if (message.action === "feedbackSent") {
         sendResponse({ success: true });
     }
+    return true; // Indica que a resposta será assíncrona
 });

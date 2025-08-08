@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "Feedback Tracker",
-    "version": "1.0",
-    "description": "Capture elementos e envie feedbacks com screenshots",
+    "version": "2.0",
+    "description": "Capture elementos e crie issues no Jira com screenshots",
     "permissions": [
         "activeTab",
         "scripting",
@@ -12,12 +12,11 @@
     ],
     "host_permissions": [
         "https://api.imgbb.com/*",
-        "https://api.airtable.com/*",
+        "https://*.atlassian.net/*",
         "<all_urls>"
     ],
     "background": {
-        "service_worker": "background.js",
-        "type": "module"
+        "service_worker": "background.js"
     },
     "action": {
         "default_popup": "popup.html",
