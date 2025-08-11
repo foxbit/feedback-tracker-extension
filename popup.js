@@ -6,7 +6,7 @@ const feedbackInput = document.getElementById("feedback");
 const selectedElementDiv = document.getElementById("selectedElement");
 const statusMessageDiv = document.getElementById("statusMessage");
 const projectSelect = document.getElementById("projectSelect");
-const statusSelect = document.getElementById("statusSelect");
+
 const steps = document.querySelectorAll('.step');
 const step1Content = document.getElementById("step1Content");
 const step2Content = document.getElementById("step2Content");
@@ -15,7 +15,7 @@ const step2Content = document.getElementById("step2Content");
 let isCapturing = false;
 let currentStep = 1;
 let selectedProjectKey = null;
-let selectedStatusId = null;
+
 let selectedElement = null;
 
 // Carregar projetos ao iniciar
@@ -68,59 +68,7 @@ async function loadProjects() {
 
 
 
-// Função para carregar status do projeto
-async function loadProjectStatuses(projectKey) {
-    try {
-        console.log('Carregando status para projeto:', projectKey);
-        statusSelect.disabled = true;
-        statusSelect.innerHTML = '<option value="">Carregando status...</option>';
-        
-        const response = await new Promise((resolve) => {
-            chrome.runtime.sendMessage({ action: "getProjectStatuses", projectKey }, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error('Erro no chrome.runtime:', chrome.runtime.lastError);
-                    resolve({ success: false, error: chrome.runtime.lastError });
-                } else {
-                    console.log('Resposta recebida:', response);
-                    resolve(response);
-                }
-            });
-        });
 
-        if (response.success && response.statuses) {
-            console.log('Status carregados com sucesso:', response.statuses.length, 'itens');
-            // Limpar opções existentes
-            statusSelect.innerHTML = '<option value="">Selecione um status</option>';
-            
-            // Adicionar status ao select
-            response.statuses.forEach(status => {
-                const option = document.createElement('option');
-                option.value = status.id;
-                option.textContent = status.name;
-                option.dataset.category = status.statusCategory.key;
-                statusSelect.appendChild(option);
-            });
-            
-            // Selecionar automaticamente o primeiro status (backlog)
-            if (response.statuses.length > 0) {
-                statusSelect.value = response.statuses[0].id;
-                selectedStatusId = response.statuses[0].id;
-                console.log('Status padrão selecionado:', response.statuses[0].name);
-            }
-            
-            statusSelect.disabled = false;
-            console.log('StatusSelect habilitado');
-        } else {
-            console.error('Falha ao carregar status:', response);
-            statusSelect.innerHTML = '<option value="">Erro ao carregar status</option>';
-            console.error('Erro ao carregar status:', response.error);
-        }
-    } catch (error) {
-        console.error('Exceção ao carregar status:', error);
-        statusSelect.innerHTML = '<option value="">Erro ao carregar status</option>';
-        console.error('Erro ao carregar status do projeto:', error);
-    }
-}
 
 // Event listener para seleção de projeto
 projectSelect.addEventListener('change', (event) => {
@@ -128,24 +76,11 @@ projectSelect.addEventListener('change', (event) => {
     
     // Salvar projeto selecionado
     chrome.storage.local.set({ selectedProjectKey });
-    
-    // Carregar status do projeto selecionado
-    if (selectedProjectKey) {
-        loadProjectStatuses(selectedProjectKey);
-    } else {
-        // Limpar seleção de status
-        statusSelect.innerHTML = '<option value="">Selecione um status</option>';
-        statusSelect.disabled = true;
-        selectedStatusId = null;
-    }
 });
 
 
 
-// Event listener para seleção de status
-statusSelect.addEventListener('change', (event) => {
-    selectedStatusId = event.target.value;
-});
+
 
 // Função para atualizar os passos
 function updateSteps(step) {
@@ -243,7 +178,6 @@ function restorePopupState() {
             
             // Restaurar valores das variáveis
             selectedProjectKey = data.popupState.selectedProjectKey;
-            selectedStatusId = data.popupState.selectedStatusId;
             
             // Restaurar texto do feedback
             if (data.popupState.feedbackText) {
@@ -253,15 +187,6 @@ function restorePopupState() {
             // Restaurar seleções dos selects
             if (selectedProjectKey) {
                 projectSelect.value = selectedProjectKey;
-                // Recarregar status para o projeto selecionado
-                loadProjectStatuses(selectedProjectKey);
-                
-                // Aguardar um pouco para o select carregar e então restaurar o valor
-                setTimeout(() => {
-                    if (selectedStatusId) {
-                        statusSelect.value = selectedStatusId;
-                    }
-                }, 500);
             }
             
             // Limpar estado salvo após restaurar
@@ -314,7 +239,6 @@ function startCaptureProcess(tabId) {
     chrome.storage.local.set({
         'popupState': {
             selectedProjectKey: selectedProjectKey,
-            selectedStatusId: selectedStatusId,
             feedbackText: feedbackInput.value
         }
     }, () => {
@@ -357,8 +281,7 @@ async function sendFeedback() {
             action: 'sendFeedback',
             element: selectedElement,
             feedback: feedback,
-            projectKey: selectedProjectKey,
-            statusId: selectedStatusId
+            projectKey: selectedProjectKey
         });
 
         if (response.success) {
@@ -418,8 +341,7 @@ sendButton.addEventListener("click", async () => {
                         element: data.selectedElement,
                         feedback: feedback,
                         url: tabs[0].url,
-                        projectKey: selectedProjectKey,
-                        statusId: selectedStatusId
+                        projectKey: selectedProjectKey
                     }, (response) => {
                         if (chrome.runtime.lastError) {
                             console.error("Erro ao enviar mensagem:", chrome.runtime.lastError);

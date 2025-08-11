@@ -171,85 +171,7 @@ async function fetchUsers(projectKey = null) {
 }
 
 // Função para buscar status de um projeto
-async function fetchProjectStatuses(projectKey) {
-    try {
-        console.log('Buscando status para projeto:', projectKey);
-        const config = await getConfig();
-        if (!config.JIRA_URL || !config.JIRA_EMAIL || !config.JIRA_TOKEN) {
-            console.error('Configurações básicas não encontradas');
-            throw new Error('Configurações básicas não encontradas. Por favor, configure URL, email e token nas opções da extensão.');
-        }
 
-        if (!projectKey) {
-            console.error('Chave do projeto é obrigatória');
-            throw new Error('Chave do projeto é obrigatória.');
-        }
-
-        // Criar credenciais base64 para autenticação básica
-        const credentials = btoa(`${config.JIRA_EMAIL}:${config.JIRA_TOKEN}`);
-
-        console.log('Fazendo requisição para:', `${config.JIRA_URL}/rest/api/3/project/${projectKey}/statuses`);
-
-        const response = await fetch(
-            `${config.JIRA_URL}/rest/api/3/project/${projectKey}/statuses`,
-            {
-                headers: {
-                    "Authorization": `Basic ${credentials}`,
-                    "Accept": "application/json"
-                }
-            }
-        );
-        
-        console.log('Status da resposta:', response.status);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Erro na resposta:', errorText);
-            throw new Error(`Erro ao buscar status do projeto: ${response.status} - ${errorText}`);
-        }
-        
-        const statusData = await response.json();
-        console.log('Dados recebidos:', statusData);
-        
-        // Extrair todos os status únicos de todos os tipos de issue
-        const allStatuses = new Set();
-        statusData.forEach(issueType => {
-            if (issueType.statuses) {
-                issueType.statuses.forEach(status => {
-                    allStatuses.add(JSON.stringify({
-                        id: status.id,
-                        name: status.name,
-                        description: status.description || '',
-                        statusCategory: status.statusCategory
-                    }));
-                });
-            }
-        });
-        
-        // Converter de volta para array de objetos e ordenar
-        const uniqueStatuses = Array.from(allStatuses)
-            .map(statusStr => JSON.parse(statusStr))
-            .sort((a, b) => {
-                // Ordenar por categoria de status primeiro (To Do, In Progress, Done)
-                const categoryOrder = { 'new': 1, 'indeterminate': 2, 'done': 3 };
-                const aCategoryOrder = categoryOrder[a.statusCategory?.key] || 999;
-                const bCategoryOrder = categoryOrder[b.statusCategory?.key] || 999;
-                
-                if (aCategoryOrder !== bCategoryOrder) {
-                    return aCategoryOrder - bCategoryOrder;
-                }
-                
-                // Se mesma categoria, ordenar por nome
-                return a.name.localeCompare(b.name);
-            });
-        
-        console.log('Status únicos encontrados:', uniqueStatuses.length);
-        return uniqueStatuses;
-    } catch (error) {
-        console.error('Erro ao buscar status do projeto:', error);
-        return [];
-    }
-}
 
 // Função para capturar a tela inteira
 async function captureFullScreen() {
@@ -386,14 +308,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
     
-    if (message.action === "getProjectStatuses") {
-        fetchProjectStatuses(message.projectKey).then(statuses => {
-            sendResponse({ success: true, statuses });
-        }).catch(error => {
-            sendResponse({ success: false, error: error.message });
-        });
-        return true;
-    }
+
     
     if (message.action === "captureFullScreen") {
         captureFullScreen().then(imageData => {
@@ -414,7 +329,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             try {
                 console.log("Mensagem recebida no background:", message);
                 console.log("ProjectKey recebido:", message.projectKey);
-                console.log("StatusId recebido:", message.statusId);
                 
                 const config = await getConfig();
                 
