@@ -6,7 +6,6 @@ const feedbackInput = document.getElementById("feedback");
 const selectedElementDiv = document.getElementById("selectedElement");
 const statusMessageDiv = document.getElementById("statusMessage");
 const projectSelect = document.getElementById("projectSelect");
-const userSelect = document.getElementById("userSelect");
 const statusSelect = document.getElementById("statusSelect");
 const steps = document.querySelectorAll('.step');
 const step1Content = document.getElementById("step1Content");
@@ -16,8 +15,6 @@ const step2Content = document.getElementById("step2Content");
 let isCapturing = false;
 let currentStep = 1;
 let selectedProjectKey = null;
-let selectedUserId = null;
-let selectedUserName = null;
 let selectedStatusId = null;
 let selectedElement = null;
 
@@ -57,7 +54,6 @@ async function loadProjects() {
                 if (data.selectedProjectKey) {
                     projectSelect.value = data.selectedProjectKey;
                     selectedProjectKey = data.selectedProjectKey;
-                    loadUsers(selectedProjectKey);
                 }
             });
         } else {
@@ -70,65 +66,7 @@ async function loadProjects() {
     }
 }
 
-// Função para carregar usuários
-async function loadUsers(projectKey = null) {
-    if (!projectKey) {
-        userSelect.innerHTML = '<option value="">Selecione um usuário</option>';
-        userSelect.disabled = true;
-        return;
-    }
 
-    try {
-        userSelect.disabled = true;
-        userSelect.innerHTML = '<option value="">Carregando usuários...</option>';
-        
-        const response = await new Promise((resolve) => {
-            chrome.runtime.sendMessage({ action: "getUsers", projectKey }, (response) => {
-                if (chrome.runtime.lastError) {
-                    resolve({ success: false, error: chrome.runtime.lastError });
-                } else {
-                    resolve(response);
-                }
-            });
-        });
-
-        if (response.success && response.users) {
-            // Limpar opções existentes
-            userSelect.innerHTML = '<option value="">Selecione um usuário</option>';
-            
-            // Ordenar usuários alfabeticamente por nome
-            const sortedUsers = response.users.sort((a, b) => a.displayName.localeCompare(b.displayName));
-            
-            // Adicionar usuários ao select
-            sortedUsers.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = user.name;
-                option.dataset.name = user.displayName;
-                userSelect.appendChild(option);
-            });
-
-            userSelect.disabled = false;
-
-            // Carregar usuário salvo
-            chrome.storage.local.get(['selectedUserId'], (data) => {
-                if (data.selectedUserId) {
-                    userSelect.value = data.selectedUserId;
-                    selectedUserId = data.selectedUserId;
-                    const selectedOption = userSelect.querySelector(`option[value="${data.selectedUserId}"]`);
-                    if (selectedOption) {
-                        selectedUserName = selectedOption.dataset.name;
-                    }
-                }
-            });
-        } else {
-            throw new Error('Erro ao carregar usuários');
-        }
-    } catch (error) {
-        console.error('Erro ao carregar usuários:', error);
-        showStatus('Erro ao carregar lista de usuários', true);
-    }
-}
 
 // Função para carregar status do projeto
 async function loadProjectStatuses(projectKey) {
@@ -191,17 +129,10 @@ projectSelect.addEventListener('change', (event) => {
     // Salvar projeto selecionado
     chrome.storage.local.set({ selectedProjectKey });
     
-    // Carregar usuários do projeto selecionado
+    // Carregar status do projeto selecionado
     if (selectedProjectKey) {
-        loadUsers(selectedProjectKey);
-        // Carregar status do projeto selecionado
         loadProjectStatuses(selectedProjectKey);
     } else {
-        userSelect.innerHTML = '<option value="">Selecione um usuário</option>';
-        userSelect.disabled = true;
-        selectedUserId = null;
-        selectedUserName = null;
-        
         // Limpar seleção de status
         statusSelect.innerHTML = '<option value="">Selecione um status</option>';
         statusSelect.disabled = true;
@@ -209,16 +140,7 @@ projectSelect.addEventListener('change', (event) => {
     }
 });
 
-// Event listener para o select de usuários
-userSelect.addEventListener('change', (event) => {
-    selectedUserId = event.target.value;
-    const selectedOption = event.target.options[event.target.selectedIndex];
-    selectedUserName = selectedOption.dataset.name;
-    chrome.storage.local.set({ 
-        selectedUserId: selectedUserId,
-        selectedUserName: selectedUserName 
-    });
-});
+
 
 // Event listener para seleção de status
 statusSelect.addEventListener('change', (event) => {
@@ -321,8 +243,6 @@ function restorePopupState() {
             
             // Restaurar valores das variáveis
             selectedProjectKey = data.popupState.selectedProjectKey;
-            selectedUserId = data.popupState.selectedUserId;
-            selectedUserName = data.popupState.selectedUserName;
             selectedStatusId = data.popupState.selectedStatusId;
             
             // Restaurar texto do feedback
@@ -333,15 +253,11 @@ function restorePopupState() {
             // Restaurar seleções dos selects
             if (selectedProjectKey) {
                 projectSelect.value = selectedProjectKey;
-                // Recarregar usuários e status para o projeto selecionado
-                loadUsers(selectedProjectKey);
+                // Recarregar status para o projeto selecionado
                 loadProjectStatuses(selectedProjectKey);
                 
-                // Aguardar um pouco para os selects carregarem e então restaurar os valores
+                // Aguardar um pouco para o select carregar e então restaurar o valor
                 setTimeout(() => {
-                    if (selectedUserId) {
-                        userSelect.value = selectedUserId;
-                    }
                     if (selectedStatusId) {
                         statusSelect.value = selectedStatusId;
                     }
@@ -398,8 +314,6 @@ function startCaptureProcess(tabId) {
     chrome.storage.local.set({
         'popupState': {
             selectedProjectKey: selectedProjectKey,
-            selectedUserId: selectedUserId,
-            selectedUserName: selectedUserName,
             selectedStatusId: selectedStatusId,
             feedbackText: feedbackInput.value
         }
@@ -424,8 +338,8 @@ async function sendFeedback() {
         return;
     }
     
-    if (!selectedElement || !selectedUserId) {
-        showStatus('Por favor, selecione um elemento e um usuário', true);
+    if (!selectedElement) {
+        showStatus('Por favor, selecione um elemento', true);
         return;
     }
 
@@ -443,8 +357,6 @@ async function sendFeedback() {
             action: 'sendFeedback',
             element: selectedElement,
             feedback: feedback,
-            userId: selectedUserId,
-            userName: selectedUserName,
             projectKey: selectedProjectKey,
             statusId: selectedStatusId
         });
@@ -473,10 +385,7 @@ sendButton.addEventListener("click", async () => {
     console.log("Botão de enviar clicado");
     const feedback = feedbackInput.value.trim();
     
-    if (!selectedUserId || !selectedUserName) {
-        showStatus("Por favor, selecione um usuário antes de enviar.", true);
-        return;
-    }
+
     
     if (!feedback) {
         showStatus("Por favor, digite um feedback antes de enviar.", true);
@@ -509,8 +418,6 @@ sendButton.addEventListener("click", async () => {
                         element: data.selectedElement,
                         feedback: feedback,
                         url: tabs[0].url,
-                        userId: selectedUserId,
-                        userName: selectedUserName,
                         projectKey: selectedProjectKey,
                         statusId: selectedStatusId
                     }, (response) => {
@@ -567,7 +474,6 @@ function resetForm() {
     updateSelectedElement(null);
     updateSteps(1);
     selectedElement = null;
-    // Não resetamos o usuário selecionado para manter a preferência
 }
 
 // Função para verificar configurações
