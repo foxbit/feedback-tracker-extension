@@ -12,8 +12,7 @@
     ],
     "host_permissions": [
         "https://api.imgbb.com/*",
-        "https://*.atlassian.net/*",
-        "<all_urls>"
+        "https://*.atlassian.net/*"
     ],
     "background": {
         "service_worker": "background.js"

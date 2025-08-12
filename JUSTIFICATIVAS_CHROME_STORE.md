@@ -21,11 +21,16 @@ A extensão tem uma função específica e bem definida: permitir que usuários 
 - Criar evidências visuais para anexar aos issues do Jira
 - Melhorar a qualidade do feedback com contexto visual
 
-### 3. Host Permissions (<all_urls>)
-**Justificativa**: Necessária para permitir que a extensão funcione em qualquer site onde o usuário precise reportar feedback. As permissões específicas são:
-- `https://api.imgbb.com/*`: Para upload de imagens capturadas
-- `https://*.atlassian.net/*`: Para comunicação com APIs do Jira
-- `<all_urls>`: Para permitir captura de elementos em qualquer site
+### 3. Host Permissions (Permissões de Host)
+**Permissões solicitadas:**
+- `https://api.imgbb.com/*`
+- `https://*.atlassian.net/*`
+
+**Justificativa**: Necessárias para:
+- **ImgBB API**: Upload de screenshots capturadas para hospedagem de imagens
+- **Atlassian/Jira**: Comunicação com servidores Jira para criação de issues e autenticação
+
+**Nota sobre segurança**: Removemos a permissão `<all_urls>` e utilizamos apenas `activeTab` para interação com páginas web, seguindo as melhores práticas de segurança do Chrome Web Store.
 
 ### 4. Código Remoto
 **Justificativa**: A extensão NÃO utiliza código remoto. Todo o código é empacotado localmente nos arquivos:
