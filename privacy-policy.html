@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidade - Feedback Tracker Extension</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #7f8c8d;
+        }
+        .highlight {
+            background-color: #e8f4fd;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            margin: 20px 0;
+        }
+        .data-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .data-collected {
+            background-color: #d5f4e6;
+            border-left: 4px solid #27ae60;
+        }
+        .data-not-collected {
+            background-color: #fadbd8;
+            border-left: 4px solid #e74c3c;
+        }
+        .contact-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 30px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        .version {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            text-align: right;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Política de Privacidade</h1>
+        <h2>Feedback Tracker Extension</h2>
+        
+        <div class="highlight">
+            <strong>Última atualização:</strong> Dezembro 2024<br>
+            <strong>Versão:</strong> 2.0
+        </div>
+
+        <h2>📋 Visão Geral</h2>
+        <p>A extensão <strong>Feedback Tracker</strong> foi desenvolvida com foco na privacidade e transparência. Esta política explica quais dados coletamos, como os usamos e como protegemos sua privacidade.</p>
+
+        <div class="highlight">
+            <strong>Propósito único:</strong> Capturar elementos visuais de páginas web e criar automaticamente issues no Jira com screenshots para facilitar o processo de feedback e bug reporting.
+        </div>
+
+        <h2>📊 Coleta de Dados</h2>
+        
+        <h3>✅ Dados que Coletamos</h3>
+        
+        <div class="data-item data-collected">
+            <strong>🔑 Informações de Autenticação</strong><br>
+            • Tokens de API do Jira fornecidos voluntariamente pelo usuário<br>
+            • Armazenados localmente no navegador<br>
+            • Nunca compartilhados com terceiros
+        </div>
+
+        <div class="data-item data-collected">
+            <strong>🌐 Informações de Localização (URL)</strong><br>
+            • URL da página atual onde o feedback é capturado<br>
+            • Título da página atual<br>
+            • Usado exclusivamente para fornecer contexto ao issue no Jira
+        </div>
+
+        <div class="data-item data-collected">
+            <strong>📸 Conteúdo Visual</strong><br>
+            • Screenshots apenas dos elementos específicos selecionados pelo usuário<br>
+            • Capturados somente quando o usuário aciona a funcionalidade<br>
+            • Anexados ao feedback no Jira
+        </div>
+
+        <div class="data-item data-collected">
+            <strong>⚙️ Configurações</strong><br>
+            • Preferências do usuário (projeto Jira selecionado, servidor configurado)<br>
+            • Armazenadas localmente para melhor experiência
+        </div>
+
+        <h3>❌ Dados que NÃO Coletamos</h3>
+        
+        <div class="data-item data-not-collected">
+            <strong>🚫 Informações Pessoais:</strong> Nome, endereço, e-mail, idade, números de identificação
+        </div>
+        
+        <div class="data-item data-not-collected">
+            <strong>🚫 Informações de Saúde:</strong> Dados médicos, histórico de saúde, sintomas
+        </div>
+        
+        <div class="data-item data-not-collected">
+            <strong>🚫 Informações Financeiras:</strong> Cartões de crédito, dados bancários, transações
+        </div>
+        
+        <div class="data-item data-not-collected">
+            <strong>🚫 Comunicações:</strong> E-mails, mensagens, conversas
+        </div>
+        
+        <div class="data-item data-not-collected">
+            <strong>🚫 Atividade Geral:</strong> Navegação, cliques, movimentos do mouse, teclas pressionadas
+        </div>
+
+        <h2>🎯 Uso dos Dados</h2>
+        <p>Os dados coletados são usados exclusivamente para:</p>
+        <ul>
+            <li><strong>Autenticação:</strong> Conectar com sua instância do Jira</li>
+            <li><strong>Contexto:</strong> Fornecer informações relevantes sobre a página onde o feedback foi capturado</li>
+            <li><strong>Evidência Visual:</strong> Anexar screenshots dos elementos selecionados</li>
+            <li><strong>Configuração:</strong> Manter suas preferências entre sessões</li>
+        </ul>
+
+        <h2>💾 Armazenamento e Compartilhamento</h2>
+        
+        <h3>Armazenamento Local</h3>
+        <p>Todos os dados são armazenados localmente no seu navegador usando a API de storage do Chrome. Nenhum dado é enviado para nossos servidores.</p>
+        
+        <h3>Compartilhamento Limitado</h3>
+        <p>Os dados são compartilhados apenas com:</p>
+        <ul>
+            <li><strong>Seu servidor Jira:</strong> Para criar issues com o feedback</li>
+            <li><strong>ImgBB:</strong> Para hospedagem temporária de screenshots (anexados ao Jira)</li>
+        </ul>
+
+        <h2>🔐 Segurança</h2>
+        <ul>
+            <li><strong>Criptografia:</strong> Toda comunicação via HTTPS</li>
+            <li><strong>Armazenamento Seguro:</strong> Tokens armazenados de forma segura no navegador</li>
+            <li><strong>Acesso Limitado:</strong> Permissões mínimas necessárias</li>
+            <li><strong>Sem Tracking:</strong> Não rastreamos atividade do usuário</li>
+        </ul>
+
+        <h2>👤 Seus Direitos</h2>
+        <p>Você tem total controle sobre seus dados:</p>
+        <ul>
+            <li><strong>Acesso:</strong> Visualizar configurações na página de opções da extensão</li>
+            <li><strong>Modificação:</strong> Alterar configurações a qualquer momento</li>
+            <li><strong>Exclusão:</strong> Remover a extensão apaga todos os dados locais</li>
+            <li><strong>Portabilidade:</strong> Exportar configurações se necessário</li>
+        </ul>
+
+        <h2>🔄 Atualizações da Política</h2>
+        <p>Esta política pode ser atualizada ocasionalmente. Mudanças significativas serão comunicadas através de atualizações da extensão.</p>
+
+        <h2>📞 Contato</h2>
+        <div class="contact-info">
+            <p>Para dúvidas sobre esta política de privacidade ou sobre o uso de seus dados:</p>
+            <p><strong>Desenvolvedor:</strong> Angelo Rosa<br>
+            <strong>Projeto:</strong> Feedback Tracker Extension<br>
+            <strong>GitHub:</strong> <a href="https://github.com/angelorosa/feedback-tracker-extension">feedback-tracker-extension</a></p>
+        </div>
+
+        <h2>✅ Declarações de Conformidade</h2>
+        <div class="highlight">
+            <p><strong>Declaramos que:</strong></p>
+            <ul>
+                <li>✅ Não vendemos nem transferimos dados do usuário a terceiros fora dos casos de uso aprovados</li>
+                <li>✅ Não usamos dados para fins não relacionados ao objetivo da extensão</li>
+                <li>✅ Não usamos dados para análises de crédito ou empréstimos</li>
+                <li>✅ Mantemos total transparência sobre coleta e uso de dados</li>
+            </ul>
+        </div>
+
+        <div class="version">
+            Política de Privacidade v2.0 - Feedback Tracker Extension
+        </div>
+    </div>
+</body>
+</html>
